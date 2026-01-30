@@ -1,0 +1,8 @@
+# Hangbok77 - URL 리라이팅
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /dolbom_php/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?route=$1 [L,QSA]
+</IfModule>

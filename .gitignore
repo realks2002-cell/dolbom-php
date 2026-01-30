@@ -1,0 +1,75 @@
+# 환경 변수 및 설정 파일
+.env
+.env.local
+.env.production
+.env.development
+
+# PHP 세션 파일
+storage/sessions/*.sess_*
+storage/sessions/sess_*
+
+# 로그 파일
+*.log
+logs/
+
+# IDE 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 파일
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node modules
+node_modules/
+manager-app/node_modules/
+
+# 빌드 파일
+dist/
+build/
+manager-app/dist/
+manager-app/build/
+
+# Android 빌드 파일
+manager-app/android/.gradle/
+manager-app/android/app/build/
+manager-app/android/.idea/
+manager-app/android/local.properties
+
+# iOS 빌드 파일
+manager-app/ios/
+manager-app/.capacitor/
+
+# 캐시 파일
+.cache/
+*.cache
+
+# 임시 파일
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 업로드된 파일 (필요시 제외)
+# storage/uploads/
+
+# 테스트 파일
+test_*.php
+test-*.php
+
+# 압축 파일
+*.zip
+*.tar.gz
+*.rar
+
+# Firebase 설정 (보안상 제외)
+google-services.json
+firebase-config.json
+
+# 기타
+*.sublime-project
+*.sublime-workspace

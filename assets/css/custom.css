@@ -1,0 +1,28 @@
+/**
+ * Hangbok77 - 커스텀 CSS
+ * - Noto Sans KR 폰트
+ * - Tailwind 보완 스타일
+ * - inline-style 금지, 본 파일에만 작성
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-sans: 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* 접근성: 터치 영역 최소 44px */
+button, .btn, [role="button"], a[href].btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 반응형 기본 유지 */
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hangbok77 매니저</string>
+    <string name="title_activity_main">Hangbok77 매니저</string>
+    <string name="package_name">com.hangbok77.manager</string>
+    <string name="custom_url_scheme">com.hangbok77.manager</string>
+</resources>
