@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>푸시 알림 테스트 - Hangbok77</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
     </style>

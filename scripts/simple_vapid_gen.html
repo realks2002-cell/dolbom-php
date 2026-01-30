@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAPID 키 생성</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 30px; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        button:hover { background: #0056b3; }
+        .key-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .key-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        .key-value {
+            background: #fff;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .code {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 VAPID 키 생성 (브라우저)</h1>
+        
+        <button onclick="generateKeys()">VAPID 키 생성하기</button>
+        
+        <div id="result" class="hidden">
+            <div class="key-section">
+                <div class="key-label">공개 키 (Public Key)</div>
+                <div class="key-value" id="publicKey"></div>
+            </div>
+            
+            <div class="key-section">
+                <div class="key-label">비공개 키 (Private Key)</div>
+                <div class="key-value" id="privateKey"></div>
+            </div>
+            
+            <div class="info">
+                <h3>📝 설정 방법</h3>
+                <p><strong>1. config/app.php</strong>에 다음 내용을 추가하세요:</p>
+                <div class="code" id="configCode"></div>
+                
+                <p style="margin-top: 20px;"><strong>⚠️ 주의사항:</strong></p>
+                <ul>
+                    <li>비공개 키는 절대 클라이언트에 노출하지 마세요</li>
+                    <li>공개 키만 브라우저에서 사용합니다</li>
+                    <li>이 키들을 안전하게 저장하세요</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function base64UrlEncode(buffer) {
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        async function generateKeys() {
+            try {
+                // ECDSA P-256 키 쌍 생성
+                const keyPair = await window.crypto.subtle.generateKey(
+                    {
+                        name: 'ECDSA',
+                        namedCurve: 'P-256'
+                    },
+                    true,
+                    ['sign', 'verify']
+                );
+
+                // 공개 키 내보내기
+                const publicKeyBuffer = await window.crypto.subtle.exportKey('raw', keyPair.publicKey);
+                const publicKeyBase64 = base64UrlEncode(publicKeyBuffer);
+
+                // 비공개 키 내보내기
+                const privateKeyBuffer = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+                const privateKeyBase64 = base64UrlEncode(privateKeyBuffer);
+
+                // 결과 표시
+                document.getElementById('publicKey').textContent = publicKeyBase64;
+                document.getElementById('privateKey').textContent = privateKeyBase64;
+                
+                document.getElementById('configCode').innerHTML = `
+// VAPID 키 (Web Push 전용)<br>
+define('VAPID_PUBLIC_KEY', '${publicKeyBase64}');<br>
+define('VAPID_PRIVATE_KEY', '${privateKeyBase64}');
+                `.trim();
+                
+                document.getElementById('result').classList.remove('hidden');
+                
+            } catch (error) {
+                alert('키 생성 실패: ' + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

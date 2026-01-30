@@ -3,12 +3,6 @@ import { getToken } from './api'
 
 const routes = [
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('./views/Login.vue'),
-    meta: { guest: true },
-  },
-  {
     path: '/install',
     name: 'Install',
     component: () => import('./views/Install.vue'),
@@ -25,6 +19,15 @@ const routes = [
       { path: 'settings', name: 'Settings', component: () => import('./views/Settings.vue') },
     ],
   },
+  // 모든 경로에 대한 fallback (카페24 로그인 페이지로 리다이렉트)
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: () => {
+      // 카페24 로그인 페이지로 리다이렉트
+      const apiBase = import.meta.env.VITE_API_BASE || ''
+      return apiBase ? `${apiBase}/manager/login` : '/manager/login'
+    },
+  },
 ]
 
 const router = createRouter({
@@ -34,8 +37,22 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const token = getToken()
-  if (to.meta.requiresAuth && !token) return next('/login')
-  if (to.meta.guest && token) return next('/')
+  
+  // /install 경로는 인증 불필요
+  if (to.path === '/install') {
+    next()
+    return
+  }
+  
+  // 토큰이 없으면 카페24 로그인 페이지로 리다이렉트
+  if (!token) {
+    const apiBase = import.meta.env.VITE_API_BASE || ''
+    const loginUrl = apiBase ? `${apiBase}/manager/login` : '/manager/login'
+    // window.location을 사용하여 완전한 페이지 리다이렉트
+    window.location.href = loginUrl
+    return
+  }
+  
   next()
 })
 

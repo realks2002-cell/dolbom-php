@@ -556,6 +556,12 @@ $minDate = date('Y-m-d');
             var customerKey = '<?= $currentUser['id'] ?>';
             
             console.log('결제위젯 초기화 시작...');
+            console.log('Client Key:', clientKey ? (clientKey.substring(0, 10) + '...') : '없음');
+            console.log('Customer Key:', customerKey);
+            
+            if (!clientKey || clientKey === 'your_toss_client_key') {
+                throw new Error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다. hosting.php 파일을 확인하세요.');
+            }
             
             // SDK v1: PaymentWidget 함수 직접 호출
             paymentWidget = PaymentWidget(clientKey, customerKey);
@@ -568,6 +574,14 @@ $minDate = date('Y-m-d');
             
             console.log('결제 금액:', amount);
             
+            // 결제 위젯 컨테이너 확인
+            var widgetContainer = document.querySelector('#payment-widget');
+            if (!widgetContainer) {
+                throw new Error('결제 위젯 컨테이너(#payment-widget)를 찾을 수 없습니다.');
+            }
+            
+            console.log('결제 금액으로 위젯 렌더링:', amount);
+            
             // 결제 UI 렌더링 (샘플 코드와 동일한 방식)
             paymentMethodWidget = paymentWidget.renderPaymentMethods(
                 '#payment-widget',
@@ -575,23 +589,61 @@ $minDate = date('Y-m-d');
                 { variantKey: 'DEFAULT' }
             );
             
+            console.log('결제 방법 위젯 렌더링 완료:', paymentMethodWidget);
+            
             // 약관 UI 렌더링
-            paymentWidget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
+            var agreementContainer = document.querySelector('#agreement');
+            if (agreementContainer) {
+                paymentWidget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
+                console.log('약관 위젯 렌더링 완료');
+            } else {
+                console.warn('약관 컨테이너(#agreement)를 찾을 수 없습니다.');
+            }
             
             // 렌더링 완료 이벤트
             if (paymentMethodWidget && typeof paymentMethodWidget.on === 'function') {
                 paymentMethodWidget.on('ready', function() {
-                    console.log('결제위젯 초기화 완료');
+                    console.log('결제위젯 초기화 완료 (ready 이벤트)');
                     isPaymentWidgetInitializing = false;
+                    // 결제하기 버튼 표시
+                    if (btnPayment) {
+                        btnPayment.classList.remove('hidden');
+                    }
                 });
             } else {
-                console.log('결제위젯 초기화 완료');
+                console.log('결제위젯 초기화 완료 (이벤트 없음)');
                 isPaymentWidgetInitializing = false;
+                // 결제하기 버튼 표시
+                setTimeout(function() {
+                    if (btnPayment) {
+                        btnPayment.classList.remove('hidden');
+                    }
+                }, 500);
             }
         } catch (err) {
             console.error('결제 위젯 초기화 실패:', err);
+            console.error('에러 상세:', {
+                message: err.message,
+                stack: err.stack,
+                name: err.name
+            });
             isPaymentWidgetInitializing = false;
-            alert('결제 시스템 초기화에 실패했습니다: ' + (err.message || err));
+            
+            var errorMsg = '결제 시스템 초기화에 실패했습니다.\n\n';
+            errorMsg += '오류: ' + (err.message || err) + '\n\n';
+            errorMsg += '브라우저 콘솔을 확인하시거나 페이지를 새로고침해주세요.';
+            alert(errorMsg);
+            
+            // 에러 메시지를 화면에 표시
+            var widgetContainer = document.querySelector('#payment-widget');
+            if (widgetContainer) {
+                var errorText = (err.message || '알 수 없는 오류').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+                widgetContainer.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">' +
+                    '<p class="font-semibold">결제 시스템 초기화 실패</p>' +
+                    '<p class="mt-1">' + errorText + '</p>' +
+                    '<p class="mt-2 text-xs">페이지를 새로고침하거나 관리자에게 문의하세요.</p>' +
+                    '</div>';
+            }
         }
     }
     
@@ -669,18 +721,19 @@ $minDate = date('Y-m-d');
                 console.log('결제 요청:', { orderId, orderName });
                 
                 // SDK v1: requestPayment는 Promise를 반환하지 않음 (리다이렉트 방식)
-                var successUrl = '<?= $base ?>/payment/success';
-                var failUrl = '<?= $base ?>/payment/fail';
+                var baseUrl = '<?= $base ?>';
+                var successUrl = baseUrl + '/payment/success';
+                var failUrl = baseUrl + '/payment/fail';
                 
                 // URL이 상대 경로인 경우 절대 URL로 변환
                 if (!successUrl.startsWith('http')) {
-                    successUrl = window.location.origin + successUrl;
+                    successUrl = window.location.origin + (successUrl.startsWith('/') ? '' : '/') + successUrl;
                 }
                 if (!failUrl.startsWith('http')) {
-                    failUrl = window.location.origin + failUrl;
+                    failUrl = window.location.origin + (failUrl.startsWith('/') ? '' : '/') + failUrl;
                 }
                 
-                console.log('결제 URL:', { successUrl, failUrl });
+                console.log('결제 URL:', { successUrl, failUrl, baseUrl: baseUrl });
                 
                 // 결제 요청 (SDK v1은 리다이렉트 방식)
                 try {

@@ -15,17 +15,10 @@ if (empty($_SESSION['manager_id'])) {
     redirect('/manager/login');
 }
 
-// PWA 사용 시 Vue.js 앱으로 리다이렉트
-require_once dirname(__DIR__, 2) . '/includes/jwt.php';
-$payload = [
-    'sub' => (string)$_SESSION['manager_id'],
-    'role' => 'manager',
-    'exp' => time() + (30 * 24 * 3600),
-];
-$token = jwt_encode($payload, API_JWT_SECRET);
-$viteAppUrl = getenv('VITE_APP_URL') ?: 'http://localhost:3000';
-header('Location: ' . $viteAppUrl . '/?token=' . urlencode($token));
-exit;
+$managerId = $_SESSION['manager_id'];
+
+// DB 연결
+$pdo = require dirname(__DIR__, 2) . '/database/connect.php';
 
 // 탭 파라미터 확인
 $tab = $_GET['tab'] ?? '';
@@ -72,14 +65,38 @@ $appliedStmt->execute([$managerId]);
 $appliedIds = $appliedStmt->fetchAll(PDO::FETCH_COLUMN);
 
 $pageTitle = '매니저 대시보드 - ' . APP_NAME;
+
+// 소요시간 포맷팅 함수
+function formatDuration($minutes) {
+    $hours = floor($minutes / 60);
+    $mins = $minutes % 60;
+    if ($hours > 0 && $mins > 0) {
+        return $hours . '시간 ' . $mins . '분';
+    } elseif ($hours > 0) {
+        return $hours . '시간';
+    } else {
+        return $mins . '분';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hangbok77 매니저 대시보드">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="매니저">
     <title><?= $pageTitle ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="<?= $base ?>/assets/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="<?= $base ?>/assets/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="<?= $base ?>/assets/icons/icon-512x512.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="<?= $base ?>/assets/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="<?= $base ?>/assets/icons/icon-512x512.png">
+    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
     <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
 </head>
 <body class="bg-gray-50">
@@ -101,7 +118,8 @@ $pageTitle = '매니저 대시보드 - ' . APP_NAME;
                 <a href="<?= $base ?>/manager/dashboard" class="px-6 py-4 text-sm font-medium <?= $tab !== 'matching' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700' ?>">홈</a>
                 <a href="<?= $base ?>/manager/dashboard?tab=matching" class="px-6 py-4 text-sm font-medium <?= $tab === 'matching' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700' ?>">내 매칭현황</a>
                 <a href="<?= $base ?>/manager/schedule" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">내 근무기록</a>
-                <a href="<?= $base ?>/manager/earnings" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">입금현황</a>
+                <!-- 입금현황 탭 숨김 -->
+                <!-- <a href="<?= $base ?>/manager/earnings" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">입금현황</a> -->
             </div>
         </div>
     </nav>
@@ -141,7 +159,49 @@ $pageTitle = '매니저 대시보드 - ' . APP_NAME;
         $myApplications = $myApplicationsStmt->fetchAll();
         ?>
         <?php if (count($myApplications) > 0): ?>
-        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <!-- 모바일 카드 뷰 -->
+        <div class="md:hidden space-y-4">
+            <?php foreach ($myApplications as $app): ?>
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <h3 class="font-semibold text-gray-900"><?= htmlspecialchars($app['service_type']) ?></h3>
+                        <p class="text-sm text-gray-500 mt-1"><?= htmlspecialchars($app['service_date']) ?> <?= substr($app['start_time'], 0, 5) ?></p>
+                    </div>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full <?php
+                        echo match($app['status']) {
+                            'PENDING' => 'bg-yellow-100 text-yellow-800',
+                            'ACCEPTED' => 'bg-green-100 text-green-800',
+                            'REJECTED' => 'bg-red-100 text-red-800',
+                            default => 'bg-gray-100 text-gray-800'
+                        };
+                    ?>">
+                        <?php
+                        echo match($app['status']) {
+                            'PENDING' => '대기중',
+                            'ACCEPTED' => '수락됨',
+                            'REJECTED' => '거절됨',
+                            default => $app['status']
+                        };
+                        ?>
+                    </span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">고객</span>
+                        <span class="text-gray-900 font-medium"><?= htmlspecialchars($app['customer_name']) ?></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">지원일</span>
+                        <span class="text-gray-900"><?= htmlspecialchars($app['application_created_at']) ?></span>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- 데스크탑 테이블 뷰 -->
+        <div class="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -201,7 +261,63 @@ $pageTitle = '매니저 대시보드 - ' . APP_NAME;
         </div>
 
         <?php if (count($requests) > 0): ?>
-        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <!-- 모바일 카드 뷰 -->
+        <div class="md:hidden space-y-4">
+            <?php foreach ($requests as $request):
+                $isApplied = in_array($request['id'], $appliedIds);
+            ?>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 <?= $isApplied ? 'opacity-60' : 'request-card cursor-pointer' ?>"
+                <?php if (!$isApplied): ?>
+                data-request-id="<?= htmlspecialchars($request['id']) ?>"
+                data-customer-name="<?= htmlspecialchars($request['customer_name']) ?>"
+                data-service-type="<?= htmlspecialchars($request['service_type']) ?>"
+                data-service-date="<?= htmlspecialchars($request['service_date']) ?>"
+                data-start-time="<?= htmlspecialchars($request['start_time']) ?>"
+                data-duration="<?= htmlspecialchars($request['duration_minutes']) ?>"
+                data-address="<?= htmlspecialchars($request['address']) ?>"
+                data-details="<?= htmlspecialchars($request['details'] ?? '') ?>"
+                data-price="<?= htmlspecialchars($request['estimated_price']) ?>"
+                <?php endif; ?>>
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900"><?= htmlspecialchars($request['service_type']) ?></h3>
+                        <p class="text-sm text-gray-500 mt-1"><?= htmlspecialchars($request['service_date']) ?> <?= substr($request['start_time'], 0, 5) ?></p>
+                    </div>
+                    <div class="ml-4 text-right">
+                        <p class="text-lg font-bold text-blue-600"><?= number_format($request['estimated_price']) ?>원</p>
+                        <?php if ($isApplied): ?>
+                        <span class="inline-block mt-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">지원완료</span>
+                        <?php else: ?>
+                        <span class="inline-block mt-1 px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">매칭대기</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="space-y-2 text-sm border-t border-gray-100 pt-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">고객</span>
+                        <span class="text-gray-900 font-medium"><?= htmlspecialchars($request['customer_name']) ?></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">위치</span>
+                        <span class="text-gray-900 text-right flex-1 ml-2"><?= htmlspecialchars($request['address']) ?></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">소요시간</span>
+                        <span class="text-gray-900"><?= formatDuration($request['duration_minutes']) ?></span>
+                    </div>
+                    <?php if (!empty($request['details'])): ?>
+                    <div class="pt-2 border-t border-gray-100">
+                        <span class="text-gray-500">요청사항</span>
+                        <p class="text-gray-700 mt-1"><?= htmlspecialchars($request['details']) ?></p>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- 데스크탑 테이블 뷰 -->
+        <div class="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -247,17 +363,7 @@ $pageTitle = '매니저 대시보드 - ' . APP_NAME;
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900">
-                                <?php
-                                $hours = floor($request['duration_minutes'] / 60);
-                                $minutes = $request['duration_minutes'] % 60;
-                                if ($hours > 0 && $minutes > 0) {
-                                    echo $hours . '시간 ' . $minutes . '분';
-                                } elseif ($hours > 0) {
-                                    echo $hours . '시간';
-                                } else {
-                                    echo $minutes . '분';
-                                }
-                                ?>
+                                <?= formatDuration($request['duration_minutes']) ?>
                             </td>
                             <td class="px-4 py-3 text-sm font-medium text-blue-600"><?= number_format($request['estimated_price']) ?>원</td>
                             <td class="px-4 py-3 text-sm">
@@ -358,8 +464,37 @@ $pageTitle = '매니저 대시보드 - ' . APP_NAME;
     <script>
     let currentRequestId = null;
 
-    // 테이블 행 클릭 (홈 탭에서만 작동)
+    // 카드 클릭 이벤트 (모바일)
     <?php if ($tab !== 'matching'): ?>
+    document.querySelectorAll('.request-card').forEach(card => {
+        card.addEventListener('click', function() {
+            currentRequestId = this.dataset.requestId;
+
+            document.getElementById('modalServiceType').textContent = this.dataset.serviceType;
+            document.getElementById('modalCustomerName').textContent = this.dataset.customerName;
+            document.getElementById('modalPrice').textContent = parseInt(this.dataset.price).toLocaleString() + '원';
+            document.getElementById('modalDate').textContent = this.dataset.serviceDate + ' ' + this.dataset.startTime.substring(0, 5);
+            // 소요시간을 분에서 시간으로 변환
+            var durationMinutes = parseInt(this.dataset.duration);
+            var hours = Math.floor(durationMinutes / 60);
+            var minutes = durationMinutes % 60;
+            var durationText = '';
+            if (hours > 0 && minutes > 0) {
+                durationText = hours + '시간 ' + minutes + '분';
+            } else if (hours > 0) {
+                durationText = hours + '시간';
+            } else {
+                durationText = minutes + '분';
+            }
+            document.getElementById('modalDuration').textContent = durationText;
+            document.getElementById('modalAddress').textContent = this.dataset.address;
+            document.getElementById('modalDetails').textContent = this.dataset.details || '없음';
+
+            document.getElementById('applyModal').classList.remove('hidden');
+        });
+    });
+
+    // 테이블 행 클릭 이벤트 (데스크탑)
     document.querySelectorAll('.request-row').forEach(row => {
         row.addEventListener('click', function() {
             currentRequestId = this.dataset.requestId;
@@ -424,6 +559,169 @@ $pageTitle = '매니저 대시보드 - ' . APP_NAME;
     document.getElementById('applyModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
+    </script>
+    
+    <!-- PWA Service Worker 등록 및 자동 푸시 구독 -->
+    <script>
+    (function() {
+        'use strict';
+        
+        // Service Worker 등록 및 푸시 구독
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('<?= $base ?>/assets/js/service-worker.js')
+                    .then(function(registration) {
+                        console.log('Service Worker 등록 성공:', registration.scope);
+                        
+                        // 알림 권한 확인 및 요청
+                        return Notification.requestPermission().then(function(permission) {
+                            if (permission === 'granted') {
+                                console.log('알림 권한 허용됨');
+                                // 푸시 구독 시도
+                                return subscribeToPush(registration);
+                            } else {
+                                console.log('알림 권한 거부됨:', permission);
+                                return null;
+                            }
+                        });
+                    })
+                    .catch(function(error) {
+                        console.error('Service Worker 등록 실패:', error);
+                    });
+            });
+        }
+        
+        // 푸시 구독 함수
+        function subscribeToPush(registration) {
+            return registration.pushManager.getSubscription()
+                .then(function(subscription) {
+                    if (subscription) {
+                        console.log('이미 푸시 구독됨');
+                        // 기존 구독 정보를 서버에 등록
+                        registerPushToken(subscription);
+                        return subscription;
+                    } else {
+                        // VAPID 공개 키 (Pure Web Push)
+                        const vapidPublicKey = '<?= defined("VAPID_PUBLIC_KEY") && VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY : "" ?>';
+                        
+                        if (!vapidPublicKey) {
+                            console.warn('VAPID 키가 설정되지 않았습니다.');
+                            return null;
+                        }
+                        
+                        // VAPID 키 변환
+                        const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+                        if (!applicationServerKey) {
+                            console.error('VAPID 키 변환 실패:', vapidPublicKey);
+                            return null;
+                        }
+                        
+                        console.log('Web Push 구독 시도 중...');
+                        
+                        // Web Push 구독
+                        return registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: applicationServerKey
+                        }).then(function(subscription) {
+                            console.log('Web Push 구독 성공:', subscription);
+                            registerPushToken(subscription);
+                            return subscription;
+                        }).catch(function(error) {
+                            console.error('Web Push 구독 실패:', error);
+                            console.error('에러 상세:', {
+                                name: error.name,
+                                message: error.message,
+                                stack: error.stack
+                            });
+                        });
+                    }
+                })
+                .catch(function(error) {
+                    console.error('푸시 구독 확인 실패:', error);
+                });
+        }
+        
+        // 푸시 구독 토큰을 서버에 등록
+        function registerPushToken(subscription) {
+            if (!subscription) return;
+            
+            const endpoint = subscription.endpoint;
+            const keys = subscription.getKey ? {
+                p256dh: arrayBufferToBase64(subscription.getKey('p256dh')),
+                auth: arrayBufferToBase64(subscription.getKey('auth'))
+            } : {};
+            
+            const subscriptionObj = {
+                endpoint: endpoint,
+                keys: keys
+            };
+            
+            // 서버에 토큰 등록
+            fetch('<?= $base ?>/api/manager/register-token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    device_token: endpoint,
+                    platform: 'web',
+                    subscription: subscriptionObj  // 객체로 전송
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('푸시 토큰 등록 성공:', data);
+            })
+            .catch(error => {
+                console.error('푸시 토큰 등록 실패:', error);
+            });
+        }
+        
+        // VAPID 키를 Uint8Array로 변환 (Base64 URL-safe 형식)
+        function urlBase64ToUint8Array(base64String) {
+            if (!base64String) {
+                console.error('VAPID 키가 비어있습니다.');
+                return null;
+            }
+            
+            try {
+                // Base64 URL-safe를 일반 Base64로 변환
+                let base64 = base64String
+                    .replace(/-/g, '+')
+                    .replace(/_/g, '/');
+                
+                // 패딩 추가
+                while (base64.length % 4) {
+                    base64 += '=';
+                }
+                
+                // Base64 디코딩
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                
+                console.log('VAPID 키 변환 성공, 길이:', outputArray.length);
+                return outputArray;
+            } catch (error) {
+                console.error('VAPID 키 변환 실패:', error);
+                console.error('VAPID 키:', base64String);
+                return null;
+            }
+        }
+        
+        // ArrayBuffer를 Base64로 변환
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+    })();
     </script>
 </body>
 </html>

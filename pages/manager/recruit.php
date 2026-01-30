@@ -63,23 +63,6 @@ ob_start();
                    class="min-h-[44px] inline-flex items-center justify-center px-8 py-3 bg-primary text-white rounded-lg font-medium text-lg hover:opacity-90 transition-opacity">
                     매니저 지원하기
                 </a>
-                <button 
-                    id="installAppBtn"
-                    class="min-h-[44px] inline-flex items-center justify-center px-8 py-3 bg-green-600 text-white rounded-lg font-medium text-lg hover:opacity-90 transition-opacity hidden">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    매니저 앱 다운받기
-                </button>
-                <a href="http://localhost:3000/install" 
-                   id="goToAppBtn"
-                   target="_blank"
-                   class="min-h-[44px] inline-flex items-center justify-center px-8 py-3 bg-green-600 text-white rounded-lg font-medium text-lg hover:opacity-90 transition-opacity">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    매니저 앱 다운받기
-                </a>
             </div>
             <p class="mt-4 text-sm text-gray-600">
                 이미 계정이 있으신가요? 
@@ -125,54 +108,3 @@ ob_start();
 $layoutContent = ob_get_clean();
 require dirname(__DIR__, 2) . '/components/layout.php';
 ?>
-<script>
-// PWA 설치 기능
-let deferredPrompt;
-const installBtn = document.getElementById('installAppBtn');
-const goToAppBtn = document.getElementById('goToAppBtn');
-
-// PWA 설치 가능 시 이벤트 캡처
-window.addEventListener('beforeinstallprompt', (e) => {
-    // 기본 설치 팝업 방지
-    e.preventDefault();
-    deferredPrompt = e;
-    
-    // 설치 버튼 표시
-    if (installBtn) {
-        installBtn.classList.remove('hidden');
-        goToAppBtn.classList.add('hidden');
-    }
-});
-
-// 설치 버튼 클릭 시
-if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) {
-            // 설치 불가능한 경우 Vue.js 앱으로 이동
-            window.location.href = 'http://localhost:3000';
-            return;
-        }
-        
-        // 설치 팝업 표시
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-            console.log('PWA 설치됨');
-            installBtn.textContent = '앱이 설치되었습니다!';
-            installBtn.disabled = true;
-        } else {
-            console.log('PWA 설치 취소됨');
-        }
-        
-        deferredPrompt = null;
-        installBtn.classList.add('hidden');
-    });
-}
-
-// 이미 설치된 경우 버튼 숨기기
-if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-    if (installBtn) installBtn.classList.add('hidden');
-    if (goToAppBtn) goToAppBtn.classList.add('hidden');
-}
-</script>

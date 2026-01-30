@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
+  // Vercel 배포: base='/' (루트), 카페24 배포: base='/manager-app/' (서브디렉토리)
+  // 환경 변수로 base를 설정할 수 있음 (빌드 시: BASE=/manager-app/ npm run build)
+  base: process.env.BASE || '/',
   plugins: [
     vue(),
     VitePWA({
@@ -17,26 +20,11 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ]
+        scope: process.env.BASE || '/',
+        start_url: process.env.BASE || '/',
+        // PWA 아이콘 (파일 생성 후 주석 해제)
+        // 아이콘 생성: scripts/create-default-icons.html 파일을 브라우저에서 열어서 생성
+        icons: []
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
@@ -100,6 +88,19 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router'],
+        },
       },
     },
   },

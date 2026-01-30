@@ -13,18 +13,9 @@ init_session();
 $base = rtrim(BASE_URL, '/');
 $error = '';
 
-// 이미 로그인한 매니저는 Vue.js 앱으로 리다이렉트
+// 이미 로그인한 매니저는 대시보드로 리다이렉트
 if (!empty($_SESSION['manager_id'])) {
-    require_once dirname(__DIR__, 2) . '/includes/jwt.php';
-    $payload = [
-        'sub' => (string)$_SESSION['manager_id'],
-        'role' => 'manager',
-        'exp' => time() + (30 * 24 * 3600),
-    ];
-    $token = jwt_encode($payload, API_JWT_SECRET);
-    $viteAppUrl = getenv('VITE_APP_URL') ?: 'http://localhost:3000';
-    header('Location: ' . $viteAppUrl . '/?token=' . urlencode($token));
-    exit;
+    redirect('/manager/dashboard');
 }
 
 /**
@@ -73,45 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['manager_name'] = $manager['name'];
             $_SESSION['manager_phone'] = $manager['phone'];
             
-            // Vue.js 앱으로 리다이렉트 (JWT 토큰 생성)
-            require_once dirname(__DIR__, 2) . '/includes/jwt.php';
-            $payload = [
-                'sub' => (string)$manager['id'],
-                'role' => 'manager',
-                'exp' => time() + (30 * 24 * 3600), // 30일
-            ];
-            $token = jwt_encode($payload, API_JWT_SECRET);
-            
-            // JavaScript로 리다이렉트 (PWA에서도 작동하도록)
-            $viteAppUrl = getenv('VITE_APP_URL') ?: 'http://localhost:3000';
-            $redirectUrl = $viteAppUrl . '/?token=' . urlencode($token);
-            
-            // HTML 페이지로 토큰 전달하여 리다이렉트
-            $pageTitle = '로그인 성공 - ' . APP_NAME;
-            ?>
-            <!DOCTYPE html>
-            <html lang="ko">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title><?= htmlspecialchars($pageTitle) ?></title>
-                <script>
-                    // PWA에서도 작동하도록 window.location 사용
-                    window.location.href = <?= json_encode($redirectUrl) ?>;
-                </script>
-            </head>
-            <body>
-                <p>로그인 성공! 앱으로 이동 중...</p>
-                <script>
-                    // 폴백: JavaScript가 비활성화된 경우
-                    setTimeout(function() {
-                        window.location.href = <?= json_encode($redirectUrl) ?>;
-                    }, 1000);
-                </script>
-            </body>
-            </html>
-            <?php
-            exit;
+            // PHP 대시보드로 리다이렉트
+            redirect('/manager/dashboard');
         }
     }
 }
@@ -125,7 +79,7 @@ $pageTitle = '매니저 로그인 - ' . APP_NAME;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="매니저 로그인 - Hangbok77">
     <title><?= htmlspecialchars($pageTitle) ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
     <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
     <script>
         tailwind.config = {

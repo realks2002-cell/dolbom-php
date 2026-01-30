@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>올바른 VAPID 키 생성</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .key-box { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; word-break: break-all; font-family: monospace; font-size: 12px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>올바른 VAPID 키 생성</h1>
+    <button onclick="generate()">키 생성하기</button>
+    <div id="result"></div>
+    
+    <script>
+        function urlBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        async function generate() {
+            try {
+                // P-256 ECDSA 키 생성
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: 'ECDSA', namedCurve: 'P-256' },
+                    true,
+                    ['sign', 'verify']
+                );
+
+                // 공개 키를 raw 형식으로 내보내기 (65바이트)
+                const publicKeyRaw = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+                const publicKeyBase64 = urlBase64(publicKeyRaw);
+
+                // 비공개 키를 jwk 형식으로 내보내기
+                const privateKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
+                
+                // JWK의 d 값이 비공개 키
+                const privateKeyBase64 = privateKeyJwk.d;
+
+                const html = `
+                    <h2>✅ 생성 완료!</h2>
+                    <h3>공개 키 (Public Key) - 클라이언트용</h3>
+                    <div class="key-box">${publicKeyBase64}</div>
+                    <p>길이: ${publicKeyBase64.length} 문자 (정확히 87자여야 함)</p>
+                    
+                    <h3>비공개 키 (Private Key) - 서버용</h3>
+                    <div class="key-box">${privateKeyBase64}</div>
+                    <p>길이: ${privateKeyBase64.length} 문자</p>
+                    
+                    <h3>📝 config/app.php에 복사하세요:</h3>
+                    <div class="key-box" style="background: #e7f3ff;">
+define('VAPID_PUBLIC_KEY', '${publicKeyBase64}');<br>
+define('VAPID_PRIVATE_KEY', '${privateKeyBase64}');
+                    </div>
+                    
+                    <h3>⚠️ 주의:</h3>
+                    <ul>
+                        <li>공개 키는 정확히 87자여야 합니다</li>
+                        <li>비공개 키는 절대 노출하지 마세요</li>
+                        <li>두 키를 모두 config/app.php에 저장하세요</li>
+                    </ul>
+                `;
+                
+                document.getElementById('result').innerHTML = html;
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">오류: ${error.message}</p>`;
+            }
+        }
+        
+        // 자동 실행
+        window.onload = generate;
+    </script>
+</body>
+</html>

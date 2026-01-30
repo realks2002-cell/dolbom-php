@@ -56,7 +56,7 @@ $pageTitle = '관리자 로그인 - ' . APP_NAME;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="관리자 로그인 - Hangbok77">
     <title><?= htmlspecialchars($pageTitle) ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
     <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
     <script>
         tailwind.config = {

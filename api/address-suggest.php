@@ -24,6 +24,10 @@ if ($apiKey === '') {
     exit;
 }
 
+// 디버그 모드 (호스팅 환경에서 문제 진단용)
+$debugMode = defined('APP_DEBUG') && APP_DEBUG && isset($_GET['debug']);
+$debugInfo = [];
+
 // 검색 패턴 생성: 기본 키워드 + 번지 조합
 $patterns = [$keyword]; // 기본 검색어
 
@@ -41,15 +45,60 @@ if (!preg_match('/\d+/', $keyword)) {
 $results = [];
 $seen = []; // 중복 제거용
 
+/**
+ * HTTP 요청 헬퍼 함수 (cURL 우선, file_get_contents 폴백)
+ */
+function fetch_url($url) {
+    $response = null;
+    
+    // cURL 시도
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $err = curl_error($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($err || $status !== 200) {
+            $response = null;
+        }
+    }
+    
+    // cURL 실패 시 file_get_contents 시도
+    if ($response === null && ini_get('allow_url_fopen')) {
+        $ctx = stream_context_create(['http' => ['timeout' => 10]]);
+        $response = @file_get_contents($url, false, $ctx);
+    }
+    
+    return $response !== false && $response !== null && $response !== '' ? $response : null;
+}
+
+// 호스팅 도메인 가져오기 (VWorld API 도메인 등록용)
+$hostDomain = $_SERVER['HTTP_HOST'] ?? 'localhost';
+if ($hostDomain === 'localhost' || strpos($hostDomain, '127.0.0.1') !== false) {
+    $hostDomain = 'localhost';
+}
+
 foreach ($patterns as $pattern) {
     $address = rawurlencode($pattern);
     
-    // road 타입 시도
-    $url = "http://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=EPSG:4326&address={$address}&type=road&format=json&key={$apiKey}";
+    // road 타입 시도 (domain 파라미터 추가)
+    $url = "http://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=EPSG:4326&address={$address}&type=road&format=json&key={$apiKey}&domain={$hostDomain}";
     
-    $response = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 5]]));
+    $response = fetch_url($url);
+    if ($debugMode) {
+        $debugInfo[] = ['pattern' => $pattern, 'url' => $url, 'has_response' => $response !== null];
+    }
     if ($response) {
         $data = json_decode($response, true);
+        if ($debugMode && is_array($data)) {
+            $debugInfo[count($debugInfo) - 1]['status'] = $data['response']['status'] ?? 'UNKNOWN';
+        }
         if (is_array($data) && ($data['response']['status'] ?? '') === 'OK') {
             $result = $data['response']['result'] ?? [];
             $point = $result['point'] ?? [];
@@ -67,11 +116,11 @@ foreach ($patterns as $pattern) {
         }
     }
     
-    // parcel(지번) 타입도 시도
+    // parcel(지번) 타입도 시도 (domain 파라미터 추가)
     if (count($results) < 10) {
-        $url2 = "http://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=EPSG:4326&address={$address}&type=parcel&format=json&key={$apiKey}";
+        $url2 = "http://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=EPSG:4326&address={$address}&type=parcel&format=json&key={$apiKey}&domain={$hostDomain}";
         
-        $response2 = @file_get_contents($url2, false, stream_context_create(['http' => ['timeout' => 5]]));
+        $response2 = fetch_url($url2);
         if ($response2) {
             $data2 = json_decode($response2, true);
             if (is_array($data2) && ($data2['response']['status'] ?? '') === 'OK') {
@@ -93,8 +142,16 @@ foreach ($patterns as $pattern) {
 }
 
 if (count($results) === 0) {
-    echo json_encode(['success' => false, 'message' => '일치하는 주소를 찾지 못했습니다. 시/구/동 또는 도로명을 포함해주세요.']);
+    $errorMsg = '일치하는 주소를 찾지 못했습니다. 시/구/동 또는 도로명을 포함해주세요.';
+    if ($debugMode) {
+        $errorMsg .= ' (디버그: 패턴 ' . count($patterns) . '개 시도, API 키: ' . substr($apiKey, 0, 10) . '...)';
+    }
+    echo json_encode(['success' => false, 'message' => $errorMsg, 'debug' => $debugMode ? $debugInfo : null]);
     exit;
 }
 
-echo json_encode(['success' => true, 'items' => $results]);
+$response = ['success' => true, 'items' => $results];
+if ($debugMode) {
+    $response['debug'] = $debugInfo;
+}
+echo json_encode($response);

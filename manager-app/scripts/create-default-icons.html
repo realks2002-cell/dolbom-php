@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PWA 아이콘 생성기</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        button { padding: 10px 20px; margin: 5px; background: #2563eb; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>PWA 아이콘 생성기</h1>
+    <p>아래 버튼을 클릭하여 기본 아이콘을 생성하세요.</p>
+    
+    <canvas id="icon192" width="192" height="192"></canvas>
+    <canvas id="icon512" width="512" height="512"></canvas>
+    
+    <br>
+    <button onclick="generateIcons()">아이콘 생성</button>
+    <button onclick="download192()">192x192 다운로드</button>
+    <button onclick="download512()">512x512 다운로드</button>
+    
+    <script>
+        function generateIcons() {
+            // 192x192 아이콘
+            const canvas192 = document.getElementById('icon192');
+            const ctx192 = canvas192.getContext('2d');
+            ctx192.fillStyle = '#2563eb';
+            ctx192.fillRect(0, 0, 192, 192);
+            ctx192.fillStyle = 'white';
+            ctx192.font = 'bold 120px Arial';
+            ctx192.textAlign = 'center';
+            ctx192.textBaseline = 'middle';
+            ctx192.fillText('H', 96, 96);
+            
+            // 512x512 아이콘
+            const canvas512 = document.getElementById('icon512');
+            const ctx512 = canvas512.getContext('2d');
+            ctx512.fillStyle = '#2563eb';
+            ctx512.fillRect(0, 0, 512, 512);
+            ctx512.fillStyle = 'white';
+            ctx512.font = 'bold 320px Arial';
+            ctx512.textAlign = 'center';
+            ctx512.textBaseline = 'middle';
+            ctx512.fillText('H', 256, 256);
+        }
+        
+        function download192() {
+            const canvas = document.getElementById('icon192');
+            const link = document.createElement('a');
+            link.download = 'pwa-192x192.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        function download512() {
+            const canvas = document.getElementById('icon512');
+            const link = document.createElement('a');
+            link.download = 'pwa-512x512.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // 페이지 로드 시 자동 생성
+        window.onload = generateIcons;
+    </script>
+</body>
+</html>

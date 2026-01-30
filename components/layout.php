@@ -24,22 +24,8 @@ $layoutContent = $layoutContent ?? '';
     <meta name="description" content="믿을 수 있는 병원동행과 돌봄 서비스 - Hangbok77">
     <title><?= htmlspecialchars($pageTitle) ?></title>
     <?php if (isset($additionalHead)) echo $additionalHead; ?>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
     <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: { DEFAULT: '#2563eb' },
-                    },
-                },
-            },
-        };
-    </script>
 </head>
 <body class="font-sans antialiased">
 <?php if (!$hideHeader) { include __DIR__ . '/header.php'; } ?>

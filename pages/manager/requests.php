@@ -43,7 +43,7 @@ $pageTitle = '서비스 요청 - ' . APP_NAME;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
     <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
 </head>
 <body class="bg-gray-50">
@@ -62,10 +62,9 @@ $pageTitle = '서비스 요청 - ' . APP_NAME;
     <nav class="bg-white border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex gap-1">
-                <a href="<?= $base ?>/manager/dashboard" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">매칭현황</a>
-                <a href="<?= $base ?>/manager/requests" class="px-6 py-4 text-sm font-medium text-blue-600 border-b-2 border-blue-600">서비스 요청</a>
+                <a href="<?= $base ?>/manager/dashboard" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">홈</a>
+                <a href="<?= $base ?>/manager/dashboard?tab=matching" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">내 매칭현황</a>
                 <a href="<?= $base ?>/manager/schedule" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">내 근무기록</a>
-                <a href="<?= $base ?>/manager/earnings" class="px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">입금현황</a>
             </div>
         </div>
     </nav>

@@ -20,7 +20,7 @@ $currentUser = $currentUser ?? null;
             <a href="<?= $base ?>/about" class="text-sm font-medium text-gray-700 hover:text-gray-900">회사소개</a>
             <a href="<?= $base ?>/service-guide" class="text-sm font-medium text-gray-700 hover:text-gray-900">서비스이용</a>
             <a href="<?= $base ?>/faq" class="text-sm font-medium text-gray-700 hover:text-gray-900">자주묻는 질문</a>
-            <a href="<?= $base ?>/manager/recruit" class="text-sm font-medium text-gray-700 hover:text-gray-900">매니저지원</a>
+            <a href="<?= $base ?>/manager/recruit" class="text-sm font-medium text-gray-700 hover:text-gray-900">매니저 지원</a>
             <?php if ($userRole === ROLE_CUSTOMER): ?>
                 <a href="<?= $base ?>/requests/new" class="text-sm font-medium text-gray-700 hover:text-gray-900">서비스 요청</a>
                 <a href="<?= $base ?>/bookings" class="text-sm font-medium text-gray-700 hover:text-gray-900">내 예약</a>
@@ -45,9 +45,27 @@ $currentUser = $currentUser ?? null;
             <?php endif; ?>
 
             <!-- 모바일 햄버거 -->
-            <button type="button" class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden" aria-label="메뉴 열기">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <button type="button" id="mobile-menu-toggle" class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden" aria-label="메뉴 열기" aria-expanded="false">
+                <svg id="menu-icon" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <svg id="close-icon" class="h-6 w-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
+    </div>
+    
+    <!-- 모바일 메뉴 -->
+    <div id="mobile-menu" class="hidden md:hidden border-t bg-white">
+        <nav class="px-4 py-4 space-y-1" aria-label="모바일 메뉴">
+            <a href="<?= $base ?>/about" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">회사소개</a>
+            <a href="<?= $base ?>/service-guide" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">서비스이용</a>
+            <a href="<?= $base ?>/faq" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">자주묻는 질문</a>
+            <a href="<?= $base ?>/manager/recruit" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">매니저 지원</a>
+            <?php if ($userRole === ROLE_CUSTOMER): ?>
+                <a href="<?= $base ?>/requests/new" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">서비스 요청</a>
+                <a href="<?= $base ?>/bookings" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">내 예약</a>
+            <?php elseif ($userRole === ROLE_MANAGER): ?>
+                <a href="<?= $base ?>/manager/requests" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">새 요청</a>
+                <a href="<?= $base ?>/manager/schedule" class="min-h-[44px] flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">내 일정</a>
+            <?php endif; ?>
+        </nav>
     </div>
 </header>
