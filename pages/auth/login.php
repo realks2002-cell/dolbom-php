@@ -59,26 +59,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = '로그인 - ' . APP_NAME;
-$mainClass = 'min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4';
+$mainClass = 'min-h-screen flex flex-col items-center justify-start bg-gray-50 px-4 pt-[250px]';
 ob_start();
 $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
 ?>
 <div class="w-full max-w-md">
-    <h1 class="text-2xl font-bold">로그인</h1>
-    <p class="mt-2 text-gray-600">전화번호와 비밀번호를 입력하세요.</p>
+    <h1 class="text-3xl font-bold">로그인</h1>
+    <p class="mt-2 text-lg text-gray-600">전화번호와 비밀번호를 입력하세요.</p>
     <?php if ($error): ?>
-    <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><?= htmlspecialchars($error) ?></div>
+    <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
-    <form class="mt-6 space-y-4" action="<?= $base ?>/auth/login" method="post">
+    <form class="mt-6 space-y-4" action="<?= $base ?>/auth/login" method="post" autocomplete="off">
         <div>
-            <label for="phone" class="block text-sm font-medium text-gray-700">전화번호</label>
-            <input type="tel" id="phone" name="phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="01012345678" pattern="[0-9]*" inputmode="numeric" value="<?= $phoneVal ?>" required autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-            <p class="mt-1 text-xs text-gray-500">숫자만 입력해주세요</p>
+            <label for="phone" class="block text-base font-medium text-gray-700">전화번호</label>
+            <input type="tel" id="phone" name="phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-lg" placeholder="01012345678" pattern="[0-9]*" inputmode="numeric" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <p class="mt-1 text-sm text-gray-500">숫자만 입력해주세요</p>
         </div>
         <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">비밀번호</label>
+            <label for="password" class="block text-base font-medium text-gray-700">비밀번호</label>
             <div class="relative">
-                <input type="password" id="password" name="password" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12" required autocomplete="current-password">
+                <input type="password" id="password" name="password" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-lg" placeholder="비밀번호 입력" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
                 <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700" onclick="togglePassword()" aria-label="비밀번호 표시/숨기기">
                     <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -89,15 +89,28 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
                     </svg>
                 </button>
             </div>
-            <a href="#" class="mt-1 block text-sm text-primary hover:underline">비밀번호를 잊으셨나요?</a>
+            <a href="#" class="mt-1 block text-base text-primary hover:underline">비밀번호를 잊으셨나요?</a>
         </div>
-        <button type="submit" class="flex min-h-[44px] w-full items-center justify-center rounded-lg bg-primary font-medium text-white hover:opacity-90">로그인</button>
+        <button type="submit" class="flex min-h-[44px] w-full items-center justify-center rounded-lg bg-primary font-medium text-lg text-white hover:opacity-90">로그인</button>
     </form>
-    <p class="mt-6 text-center text-sm text-gray-600">
+    <p class="mt-6 text-center text-base text-gray-600">
         계정이 없으신가요? <a href="<?= $base ?>/auth/signup" class="font-medium text-primary hover:underline">회원가입</a>
     </p>
 </div>
 <script>
+// 페이지 로드 시 입력 필드 초기화 (브라우저 자동완성 방지)
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.getElementById('phone');
+    const passwordInput = document.getElementById('password');
+    
+    if (phoneInput) {
+        phoneInput.value = '';
+    }
+    if (passwordInput) {
+        passwordInput.value = '';
+    }
+});
+
 function togglePassword() {
     const passwordInput = document.getElementById('password');
     const eyeIcon = document.getElementById('eye-icon');

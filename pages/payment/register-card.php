@@ -9,7 +9,7 @@ $mainClass = 'min-h-screen bg-gray-50 py-8';
 $base = rtrim(BASE_URL, '/');
 ob_start();
 ?>
-<div class="mx-auto max-w-md px-4 sm:px-6">
+<div class="mx-auto max-w-md px-4 sm:px-6 mt-[300px]">
     <h1 class="text-2xl font-bold">카드 등록</h1>
     <p class="mt-2 text-gray-600">토스페이먼츠 연동 (추가 예정)</p>
     <div class="mt-8 rounded-lg border bg-white p-6">

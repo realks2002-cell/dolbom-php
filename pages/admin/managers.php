@@ -68,6 +68,7 @@ ob_start();
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">주민번호</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">주소</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">은행</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">계좌번호</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">특기</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록일</th>
@@ -87,6 +88,7 @@ ob_start();
                             <br><span class="text-gray-500 text-xs"><?= htmlspecialchars($manager['address2']) ?></span>
                             <?php endif; ?>
                         </td>
+                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['bank'] ?? '-') ?></td>
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['account_number']) ?></td>
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['specialty'] ?? '-') ?></td>
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['created_at']) ?></td>
@@ -94,7 +96,7 @@ ob_start();
                     <?php endforeach; ?>
                     <?php else: ?>
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">매니저가 없습니다.</td>
+                        <td colspan="9" class="px-4 py-8 text-center text-gray-500">매니저가 없습니다.</td>
                     </tr>
                     <?php endif; ?>
                 </tbody>

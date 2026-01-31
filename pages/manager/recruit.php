@@ -14,13 +14,16 @@ ob_start();
 ?>
 <div class="bg-white">
     <!-- 히어로 섹션 -->
-    <div class="bg-gradient-to-r from-primary to-blue-600 text-white py-16 mt-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 class="text-4xl md:text-5xl font-bold mb-4">매니저 지원</h1>
-            <p class="text-xl md:text-2xl text-blue-100">성실하고 책임감있는 매니저를 모십니다.</p>
-            <p class="mt-4 text-lg text-blue-100">언제든지 환영합니다.</p>
+    <section class="relative pt-20 pb-12 md:pt-28 md:pb-20 overflow-hidden">
+        <!-- Background Blobs -->
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-200/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-teal-200/30 rounded-full blur-3xl translate-y-1/4 -translate-x-1/4 pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-6 text-center relative z-10 pt-16">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900" data-aos="fade-up" data-aos-duration="1000">매니저 지원</h1>
+            <p class="text-xl md:text-2xl text-gray-800 mb-2 mt-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">성실하고 책임감있는 매니저를 모십니다.</p>
         </div>
-    </div>
+    </section>
 
     <!-- 메인 콘텐츠 -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

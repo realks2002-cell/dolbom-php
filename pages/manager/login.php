@@ -71,33 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = '매니저 로그인 - ' . APP_NAME;
+$mainClass = 'min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="매니저 로그인 - 행복안심동행">
-    <title><?= htmlspecialchars($pageTitle) ?></title>
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: { DEFAULT: '#2563eb' },
-                    },
-                },
-            },
-        };
-    </script>
-</head>
-<body class="font-sans antialiased bg-gray-50">
-    <div class="min-h-screen flex flex-col items-center justify-center px-4">
+<div class="w-full max-w-md">
         <div class="w-full max-w-md">
             <!-- 로고 -->
             <div class="text-center mb-8">
@@ -113,7 +90,7 @@ $pageTitle = '매니저 로그인 - ' . APP_NAME;
                 </div>
                 <?php endif; ?>
 
-                <form method="post" action="<?= $base ?>/manager/login">
+                <form method="post" action="<?= $base ?>/manager/login" autocomplete="off">
                     <div class="space-y-4">
                         <div>
                             <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
@@ -121,13 +98,14 @@ $pageTitle = '매니저 로그인 - ' . APP_NAME;
                                 type="tel" 
                                 id="phone" 
                                 name="phone" 
-                                value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>"
                                 class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
                                 placeholder="01012345678"
                                 pattern="[0-9]*"
                                 inputmode="numeric"
                                 required 
-                                autocomplete="tel"
+                                autocomplete="off"
+                                readonly
+                                onfocus="this.removeAttribute('readonly')"
                                 autofocus>
                             <p class="mt-1 text-xs text-gray-500">숫자만 입력해주세요</p>
                         </div>
@@ -142,7 +120,9 @@ $pageTitle = '매니저 로그인 - ' . APP_NAME;
                                     class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent" 
                                     placeholder="비밀번호 입력"
                                     required 
-                                    autocomplete="current-password">
+                                    autocomplete="off"
+                                    readonly
+                                    onfocus="this.removeAttribute('readonly')">
                                 <button
                                     type="button"
                                     id="togglePassword"
@@ -181,53 +161,67 @@ $pageTitle = '매니저 로그인 - ' . APP_NAME;
             </div>
         </div>
     </div>
-    
-    <script>
-        // 전화번호 입력 필터링 (숫자만 허용)
+</div>
+<script>
+    // 페이지 로드 시 입력 필드 초기화 (브라우저 자동완성 방지)
+    document.addEventListener('DOMContentLoaded', function() {
         const phoneInput = document.getElementById('phone');
-        if (phoneInput) {
-            phoneInput.addEventListener('input', function(e) {
-                // 숫자가 아닌 문자 제거
-                this.value = this.value.replace(/[^0-9]/g, '');
-            });
-            
-            // 붙여넣기 시에도 필터링
-            phoneInput.addEventListener('paste', function(e) {
-                e.preventDefault();
-                const paste = (e.clipboardData || window.clipboardData).getData('text');
-                this.value = paste.replace(/[^0-9]/g, '');
-            });
-        }
-        
-        // 비밀번호 표시/숨기기 토글
-        const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
-        const eyeIcon = document.getElementById('eyeIcon');
-        const eyeSlashIcon = document.getElementById('eyeSlashIcon');
         
-        if (togglePassword && passwordInput) {
-            togglePassword.addEventListener('click', function() {
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-                
-                // 아이콘 전환
-                if (type === 'text') {
-                    eyeIcon.classList.add('hidden');
-                    eyeSlashIcon.classList.remove('hidden');
-                } else {
-                    eyeIcon.classList.remove('hidden');
-                    eyeSlashIcon.classList.add('hidden');
-                }
-            });
-            
-            // 키보드 접근성 (Enter 키로도 토글 가능)
-            togglePassword.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    togglePassword.click();
-                }
-            });
+        if (phoneInput) {
+            phoneInput.value = '';
         }
-    </script>
-</body>
-</html>
+        if (passwordInput) {
+            passwordInput.value = '';
+        }
+    });
+    
+    // 전화번호 입력 필터링 (숫자만 허용)
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            // 숫자가 아닌 문자 제거
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        
+        // 붙여넣기 시에도 필터링
+        phoneInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            this.value = paste.replace(/[^0-9]/g, '');
+        });
+    }
+    
+    // 비밀번호 표시/숨기기 토글
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const eyeSlashIcon = document.getElementById('eyeSlashIcon');
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // 아이콘 전환
+            if (type === 'text') {
+                eyeIcon.classList.add('hidden');
+                eyeSlashIcon.classList.remove('hidden');
+            } else {
+                eyeIcon.classList.remove('hidden');
+                eyeSlashIcon.classList.add('hidden');
+            }
+        });
+        
+        // 키보드 접근성 (Enter 키로도 토글 가능)
+        togglePassword.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                togglePassword.click();
+            }
+        });
+    }
+</script>
+<?php
+$layoutContent = ob_get_clean();
+require dirname(__DIR__, 2) . '/components/layout.php';

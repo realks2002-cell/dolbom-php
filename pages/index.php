@@ -28,8 +28,8 @@ ob_start();
                 </div>
                 <h1 class="text-4xl md:text-6xl font-extrabold leading-[1.15] text-gray-900">
                     당신의 일상에 <br/>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500">따뜻한 동행</span>을<br/>
-                    선물합니다.
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500">따뜻한 동행</span>을 선물<br/>
+                    합니다.
                 </h1>
                 <p class="text-lg md:text-xl text-gray-800 leading-relaxed max-w-lg">
                     병원 동행부터 가사, 육아, 일상 케어까지.<br class="hidden md:block"/>
@@ -62,11 +62,11 @@ ob_start();
             </div>
 
             <div class="relative" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000">
-                <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 group">
+                <div class="w-[85%] mx-auto bg-white p-4 pb-12 shadow-[0_4px_20px_rgba(0,0,0,0.15),0_8px_30px_rgba(0,0,0,0.1)] rotate-[-2deg] hover:rotate-0 transition-transform duration-300">
                     <img 
                         src="<?= $base ?>/assets/images/hero.jpg" 
                         alt="행복안심동행 서비스" 
-                        class="w-full h-[500px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        class="w-full h-[320px] object-cover"
                     />
                 </div>
             </div>
@@ -176,7 +176,7 @@ ob_start();
             <!-- 위: 제목 (1칸, 전체 너비) -->
             <div class="lg:col-span-2" data-aos="fade-up">
                 <span class="text-teal-600 font-semibold tracking-wide uppercase text-base">Why Choose Us</span>
-                <h2 class="text-4xl md:text-6xl font-bold mt-4 leading-tight">
+                <h2 class="text-4xl md:text-5xl font-bold mt-4 leading-tight">
                     믿을 수 있는 <span class="text-orange-500">행복안심동행</span>의 3가지 약속
                 </h2>
             </div>
@@ -184,16 +184,16 @@ ob_start();
             <!-- 아래 왼쪽: 3가지 약속 내용 -->
             <div class="space-y-8" data-aos="fade-right">
                 <div class="flex gap-4 items-start">
-                    <div class="flex-shrink-0 w-14 h-14 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-3xl">1</div>
-                    <p class="text-2xl text-gray-800 leading-relaxed"><span class="font-bold text-3xl text-gray-900">엄격한 신원 검증</span> 모든 매니저는 신원 조회, 건강 검진, 인성 면접 등 5단계 검증 시스템을 통과했습니다.</p>
+                    <div class="flex-shrink-0 w-[50.4px] h-[50.4px] rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-[1.6875rem]">1</div>
+                    <p class="text-[1.35rem] text-gray-800 leading-relaxed"><span class="font-bold text-[1.6875rem] text-gray-900">엄격한 신원 검증</span> 모든 매니저는 신원 조회, 건강 검진, 인성 면접 등 5단계 검증 시스템을 통과했습니다.</p>
                 </div>
                 <div class="flex gap-4 items-start">
-                    <div class="flex-shrink-0 w-14 h-14 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-3xl">2</div>
-                    <p class="text-2xl text-gray-800 leading-relaxed"><span class="font-bold text-3xl text-gray-900">전문 교육 이수</span> 병원 동행, 노인 케어, 아동 심리 등 분야별 100시간 이상의 전문 교육을 의무화합니다.</p>
+                    <div class="flex-shrink-0 w-[50.4px] h-[50.4px] rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-[1.6875rem]">2</div>
+                    <p class="text-[1.35rem] text-gray-800 leading-relaxed"><span class="font-bold text-[1.6875rem] text-gray-900">전문 교육 이수</span> 병원 동행, 노인 케어, 아동 심리 등 분야별 100시간 이상의 전문 교육을 의무화합니다.</p>
                 </div>
                 <div class="flex gap-4 items-start">
-                    <div class="flex-shrink-0 w-14 h-14 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-3xl">3</div>
-                    <p class="text-2xl text-gray-800 leading-relaxed"><span class="font-bold text-3xl text-gray-900">배상 책임 보험 가입</span> 만약의 상황에 대비하여 업계 최고 수준의 배상 책임 보험에 가입되어 있어 안심할 수 있습니다.</p>
+                    <div class="flex-shrink-0 w-[50.4px] h-[50.4px] rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-[1.6875rem]">3</div>
+                    <p class="text-[1.35rem] text-gray-800 leading-relaxed"><span class="font-bold text-[1.6875rem] text-gray-900">배상 책임 보험 가입</span> 만약의 상황에 대비하여 업계 최고 수준의 배상 책임 보험에 가입되어 있어 안심할 수 있습니다.</p>
                 </div>
             </div>
             
