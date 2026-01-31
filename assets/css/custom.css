@@ -1,0 +1,31 @@
+/**
+ * 행복안심동행 - 커스텀 CSS
+ * - Pretendard (layout.php에서 CDN 로드)
+ * - Tailwind 보완 스타일
+ * - inline-style 금지, 본 파일에만 작성
+ */
+
+:root {
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+/* 접근성: 터치 영역 최소 44px */
+button, .btn, [role="button"], a[href].btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 반응형 기본 유지 */
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 랜딩 플로팅 카드 애니메이션 */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}

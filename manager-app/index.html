@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="행복안심동행 매니저 앱" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="행복안심동행 매니저" />
+    <title>행복안심동행 매니저</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Firebase SDK -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
+      import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js'
+      
+      // Firebase 설정 (웹용)
+      const firebaseConfig = {
+        apiKey: "AIzaSyDummyKeyReplaceWithReal",
+        authDomain: "dolbom-6ff79.firebaseapp.com",
+        projectId: "dolbom-6ff79",
+        storageBucket: "dolbom-6ff79.appspot.com",
+        messagingSenderId: "133410524921",
+        appId: "1:133410524921:web:dummy"
+      };
+      
+      const app = initializeApp(firebaseConfig);
+      const messaging = getMessaging(app);
+      
+      // 전역으로 사용할 수 있도록 설정
+      window.firebaseMessaging = messaging;
+      window.firebaseGetToken = getToken;
+      window.firebaseOnMessage = onMessage;
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

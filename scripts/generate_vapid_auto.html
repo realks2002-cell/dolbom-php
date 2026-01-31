@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VAPID Key Generator</title>
+</head>
+<body>
+    <h1>Generating VAPID Keys...</h1>
+    <pre id="output"></pre>
+    
+    <script>
+        async function generateAndOutput() {
+            try {
+                // ECDSA P-256 키 쌍 생성
+                const keyPair = await window.crypto.subtle.generateKey(
+                    {
+                        name: 'ECDSA',
+                        namedCurve: 'P-256'
+                    },
+                    true,
+                    ['sign', 'verify']
+                );
+
+                // 공개 키 내보내기
+                const publicKeyBuffer = await window.crypto.subtle.exportKey('raw', keyPair.publicKey);
+                const publicKeyBase64 = base64UrlEncode(publicKeyBuffer);
+
+                // 비공개 키 내보내기
+                const privateKeyBuffer = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+                const privateKeyBase64 = base64UrlEncode(privateKeyBuffer);
+
+                // 결과 출력
+                const output = `PUBLIC_KEY=${publicKeyBase64}
+PRIVATE_KEY=${privateKeyBase64}
+
+// Copy and paste to config/app.php:
+define('VAPID_PUBLIC_KEY', '${publicKeyBase64}');
+define('VAPID_PRIVATE_KEY', '${privateKeyBase64}');`;
+                
+                document.getElementById('output').textContent = output;
+                
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function base64UrlEncode(buffer) {
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        // 자동 실행
+        generateAndOutput();
+    </script>
+</body>
+</html>
