@@ -9,12 +9,19 @@ require_once dirname(__DIR__, 2) . '/includes/auth.php';
 
 $base = rtrim(BASE_URL, '/');
 
-if (!$currentUser) {
-    redirect('/auth/login');
+// 회원/비회원 구분은 1단계에서 처리
+// 비회원도 서비스 신청을 진행할 수 있도록 허용
+$userType = $_POST['user_type'] ?? ($currentUser ? 'member' : null);
+if ($userType === 'member' && !$currentUser) {
+    // 회원 선택 시 로그인 페이지로 (JavaScript에서 처리하지만 서버 측에서도 확인)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_type']) && !isset($_POST['service_type'])) {
+        redirect('/auth/login');
+    }
 }
-if ($currentUser['role'] !== ROLE_CUSTOMER) {
-    redirect('/');
-}
+
+// 로그인한 사용자는 Step 1부터 시작 (회원/비회원 구분)
+$initialStep = 1;
+// 회원도 Step 1.5를 거치도록 함
 
 $error = '';
 $RATE_PER_HOUR = 20000;
@@ -43,6 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!preg_match('/^[0-9-]+$/', $phone)) {
         $error = '올바른 전화번호 형식이 아닙니다.';
     } else {
+        // 결제 단계에서는 로그인 필요
+        if (!$currentUser || $currentUser['role'] !== ROLE_CUSTOMER) {
+            redirect('/auth/login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+        }
+        
         $durationMin = $duration * 60;
         $estimatedPrice = $duration * $RATE_PER_HOUR;
         $id = uuid4();
@@ -56,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = '서비스 요청 - ' . APP_NAME;
-$mainClass = 'min-h-screen bg-gray-50 py-8';
+$mainClass = 'min-h-screen bg-gray-50 py-8 pt-32';
 ob_start();
 
 $timeOptions = [];
@@ -73,20 +85,77 @@ $minDate = date('Y-m-d');
     <p class="mt-1 text-gray-600">원하는 서비스와 일시를 선택해주세요.</p>
 
     <!-- 진행 바 -->
-    <div class="mt-6 flex gap-1" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="5" aria-label="진행 단계">
-        <?php for ($i = 1; $i <= 5; $i++): ?>
+    <div class="mt-6 flex gap-1" role="progressbar" aria-valuenow="<?= $initialStep ?>" aria-valuemin="1" aria-valuemax="6" aria-label="진행 단계">
+        <?php for ($i = 1; $i <= 6; $i++): ?>
         <div class="h-1.5 flex-1 rounded-full bg-gray-200 step-dot" data-step="<?= $i ?>"></div>
         <?php endfor; ?>
     </div>
-    <p class="mt-2 text-sm font-medium text-gray-500"><span id="step-label">1</span> / 5</p>
+    <p class="mt-2 text-sm font-medium text-gray-500"><span id="step-label"><?= $initialStep ?></span> / 6</p>
 
     <?php if ($error): ?>
     <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form id="request-form" class="mt-6" action="<?= $base ?>/requests/new" method="post" novalidate>
-        <!-- Step 1: 서비스 선택 -->
-        <div class="request-step rounded-lg border bg-white p-6" data-step="1" id="step-1">
+        <!-- Step 1: 회원/비회원 구분 -->
+        <div class="request-step <?= $initialStep === 1 ? '' : 'hidden' ?> rounded-lg border bg-white p-6" data-step="1" id="step-1">
+            <h2 class="text-lg font-semibold">회원이신가요?</h2>
+            <p class="mt-2 text-sm text-gray-600">서비스 신청을 위해 회원 여부를 선택해주세요.</p>
+            <div class="mt-6 space-y-3">
+                <label class="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary">
+                    <input type="radio" name="user_type" value="member" class="mt-1" required>
+                    <div>
+                        <span class="font-medium text-lg">회원</span>
+                        <p class="mt-1 text-sm text-gray-600">이미 가입하신 회원이시면 로그인 후 서비스를 신청하실 수 있습니다.</p>
+                    </div>
+                </label>
+                <label class="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary">
+                    <input type="radio" name="user_type" value="non-member" class="mt-1" required>
+                    <div>
+                        <span class="font-medium text-lg">비회원</span>
+                        <p class="mt-1 text-sm text-gray-600">회원가입 후 서비스를 신청하실 수 있습니다.</p>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Step 1.5: 신청자 정보 입력 (회원/비회원 공통) -->
+        <div class="request-step hidden rounded-lg border bg-white p-6" data-step="1.5" id="step-guest-info">
+            <h2 class="text-lg font-semibold">신청자 정보를 입력해주세요</h2>
+            <p class="mt-2 text-sm text-gray-600">서비스 신청을 위해 연락받으실 정보를 입력해주세요.</p>
+            <div class="mt-6 space-y-4">
+                <div>
+                    <label for="guest_name" class="block text-sm font-medium text-gray-700">이름</label>
+                    <input type="text" id="guest_name" name="guest_name" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="이름을 입력하세요" value="<?= $currentUser && isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : '' ?>" required>
+                </div>
+                <div>
+                    <label for="guest_phone" class="block text-sm font-medium text-gray-700">전화번호</label>
+                    <input type="tel" id="guest_phone" name="guest_phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="010-1234-5678" pattern="[0-9\-]+" value="<?= $currentUser && isset($currentUser['phone']) ? htmlspecialchars($currentUser['phone']) : '' ?>" required>
+                </div>
+              
+                <div>
+    <label for="guest_address" class="block text-sm font-medium text-gray-700">방문주소</label>
+    <div class="mt-1 flex gap-2">
+        <input type="text" id="guest_address" name="guest_address" class="block flex-1 rounded-lg border border-gray-300 px-4 py-3" placeholder="도로명 또는 지번 주소 입력 후 검색" value="<?= $currentUser && isset($currentUser['address']) ? htmlspecialchars($currentUser['address']) : '' ?>" required autocomplete="off" aria-describedby="guest-address-search-msg">
+        <button type="button" id="btn-guest-address-search" class="shrink-0 min-h-[44px] min-w-[44px] rounded-lg bg-primary px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>주소 검색</button>
+    </div>
+    <p id="guest-address-search-msg" class="mt-1 text-sm" role="status" aria-live="polite"></p>
+    <div id="guest-address-results" class="mt-2 hidden space-y-1" role="list" aria-label="주소 검색 결과"></div>
+    <div>
+        <label for="guest_address_detail" class="block text-sm font-medium text-gray-700">상세 주소 <span class="text-gray-400">(선택)</span></label>
+        <input type="text" id="guest_address_detail" name="guest_address_detail" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="동/호수 등" value="<?= $currentUser && isset($currentUser['address_detail']) ? htmlspecialchars($currentUser['address_detail']) : '' ?>">
+    </div>
+</div>
+
+
+
+
+
+            </div>
+        </div>
+
+        <!-- Step 2: 서비스 선택 -->
+        <div class="request-step <?= $initialStep === 2 ? '' : 'hidden' ?> rounded-lg border bg-white p-6" data-step="2" id="step-2">
             <h2 class="text-lg font-semibold">어떤 서비스가 필요하신가요?</h2>
             <div class="mt-4 space-y-2">
                 <?php
@@ -112,8 +181,8 @@ $minDate = date('Y-m-d');
             </div>
         </div>
 
-        <!-- Step 2: 일시 -->
-        <div class="request-step hidden rounded-lg border bg-white p-6" data-step="2" id="step-2">
+        <!-- Step 3: 일시 -->
+        <div class="request-step hidden rounded-lg border bg-white p-6" data-step="3" id="step-3">
             <h2 class="text-lg font-semibold">언제 서비스가 필요하신가요?</h2>
             <div class="mt-4 space-y-4">
                 <div>
@@ -143,33 +212,6 @@ $minDate = date('Y-m-d');
                     <p class="text-sm font-medium text-gray-700">예상 금액</p>
                     <p class="mt-1 text-xl font-bold text-primary"><span id="estimated-price">0</span>원</p>
                     <p class="mt-1 text-xs text-gray-500">기본 요금 <?= number_format($RATE_PER_HOUR) ?>원/시간 × <span id="duration-display">0</span>시간 · 최종 금액은 실제 소요 시간에 따라 달라질 수 있습니다.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 3: 위치 (VWorld 주소 검색) -->
-        <div class="request-step hidden rounded-lg border bg-white p-6" data-step="3" id="step-3">
-            <h2 class="text-lg font-semibold">어디로 방문해 드릴까요?</h2>
-            <div class="mt-4 space-y-4">
-                <div>
-                    <label for="address" class="block text-sm font-medium text-gray-700">주소</label>
-                    <div class="mt-1 flex gap-2">
-                        <input type="text" id="address" name="address" class="block flex-1 rounded-lg border border-gray-300 px-4 py-3" placeholder="도로명 또는 지번 주소 입력 후 검색" value="<?= htmlspecialchars($_POST['address'] ?? '') ?>" required autocomplete="off" aria-describedby="address-search-msg">
-                        <button type="button" id="btn-address-search" class="shrink-0 min-h-[44px] min-w-[44px] rounded-lg bg-primary px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>주소 검색</button>
-                    </div>
-                    <p id="address-search-msg" class="mt-1 text-sm" role="status" aria-live="polite"></p>
-                    <div id="address-results" class="mt-2 hidden space-y-1" role="list" aria-label="주소 검색 결과"></div>
-                    <input type="hidden" name="lat" id="lat" value="<?= htmlspecialchars($_POST['lat'] ?? '') ?>">
-                    <input type="hidden" name="lng" id="lng" value="<?= htmlspecialchars($_POST['lng'] ?? '') ?>">
-                </div>
-                <div>
-                    <label for="address_detail" class="block text-sm font-medium text-gray-700">상세 주소 <span class="text-gray-400">(선택)</span></label>
-                    <input type="text" id="address_detail" name="address_detail" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="동/호수 등" value="<?= htmlspecialchars($_POST['address_detail'] ?? '') ?>">
-                </div>
-                <div>
-                    <label for="phone" class="block text-sm font-medium text-gray-700">연락처 <span class="text-red-500">*</span></label>
-                    <input type="tel" id="phone" name="phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="010-1234-5678" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>" required pattern="[0-9-]+" maxlength="20">
-                    <p class="mt-1 text-xs text-gray-500">매니저가 연락할 수 있도록 정확한 전화번호를 입력해주세요.</p>
                 </div>
             </div>
         </div>
@@ -239,7 +281,7 @@ $minDate = date('Y-m-d');
     var ratePerHour = <?= (int) $RATE_PER_HOUR ?>;
     var apiBase = <?= json_encode($base) ?>;
 
-    function step() { return parseInt(form.dataset.step || '1', 10); }
+    function step() { return parseFloat(form.dataset.step || '1'); }
     function setStep(n) {
         var s = Math.max(1, Math.min(5, n));
         form.dataset.step = String(s);
@@ -255,18 +297,50 @@ $minDate = date('Y-m-d');
                 d.classList.add('bg-primary');
             }
         });
+        // Step 1.5가 표시될 때 주소 검색 버튼 상태 업데이트
+        if (s === 1.5 && typeof updateGuestAddrBtn === 'function') {
+            setTimeout(updateGuestAddrBtn, 100);
+        }
         stepLabel.textContent = s;
         btnPrev.classList.toggle('hidden', s === 1);
         btnNext.classList.toggle('hidden', s === 5);
         btnPayment.classList.toggle('hidden', s !== 5);
+        
+        // Step 5 (결제 단계)일 때 주문 요약 업데이트
+        if (s === 5) {
+            updateSummary();
+        }
     }
 
     function validateStep(s) {
         var el = form.querySelector('.request-step[data-step="' + s + '"]');
         if (!el) return true;
         
-        // Step 1: 서비스 타입 라디오 버튼 확인
+        // Step 1: 회원/비회원 구분
         if (s === 1) {
+            var userTypeRadio = form.querySelector('input[name="user_type"]:checked');
+            if (!userTypeRadio) {
+                alert('회원 여부를 선택해주세요.');
+                var firstRadio = form.querySelector('input[name="user_type"]');
+                if (firstRadio) firstRadio.focus();
+                return false;
+            }
+            return true;
+        }
+
+        // Step 1.5: 비회원 정보 확인
+        if (s === 1.5) {
+            var gName = form.querySelector('#guest_name');
+            var gPhone = form.querySelector('#guest_phone');
+            var gAddr = form.querySelector('#guest_address');
+            if (!gName || !gName.value.trim()) { alert('이름을 입력해주세요.'); if(gName) gName.focus(); return false; }
+            if (!gPhone || !gPhone.value.trim()) { alert('전화번호를 입력해주세요.'); if(gPhone) gPhone.focus(); return false; }
+            if (!gAddr || !gAddr.value.trim()) { alert('주소를 입력해주세요.'); if(gAddr) gAddr.focus(); return false; }
+            return true;
+        }
+        
+        // Step 2: 서비스 타입 라디오 버튼 확인
+        if (s === 2) {
             var serviceRadio = form.querySelector('input[name="service_type"]:checked');
             if (!serviceRadio) {
                 alert('서비스를 선택해주세요.');
@@ -277,8 +351,8 @@ $minDate = date('Y-m-d');
             return true;
         }
         
-        // Step 2: 일시 확인
-        if (s === 2) {
+        // Step 3: 일시 확인
+        if (s === 3) {
             var date = form.querySelector('#service_date');
             var time = form.querySelector('#start_time');
             if (!date || !date.value) {
@@ -289,37 +363,6 @@ $minDate = date('Y-m-d');
             if (!time || !time.value) {
                 alert('서비스 시간을 선택해주세요.');
                 if (time) time.focus();
-                return false;
-            }
-            return true;
-        }
-        
-        // Step 3: 주소 및 전화번호 확인
-        if (s === 3) {
-            var address = form.querySelector('#address');
-            var lat = form.querySelector('#lat');
-            var lng = form.querySelector('#lng');
-            var phone = form.querySelector('#phone');
-            if (!address || !address.value.trim()) {
-                alert('주소를 입력하고 검색해주세요.');
-                if (address) address.focus();
-                return false;
-            }
-            if (!lat || !lat.value || !lng || !lng.value) {
-                alert('주소 검색을 완료해주세요.');
-                if (address) address.focus();
-                return false;
-            }
-            if (!phone || !phone.value.trim()) {
-                alert('전화번호를 입력해주세요.');
-                if (phone) phone.focus();
-                return false;
-            }
-            // 전화번호 형식 검증 (숫자와 하이픈만 허용)
-            var phonePattern = /^[0-9-]+$/;
-            if (!phonePattern.test(phone.value.trim())) {
-                alert('올바른 전화번호 형식이 아닙니다. (숫자와 하이픈만 입력 가능)');
-                if (phone) phone.focus();
                 return false;
             }
             return true;
@@ -376,14 +419,41 @@ $minDate = date('Y-m-d');
         var dt = form.querySelector('#service_date').value;
         var tm = form.querySelector('#start_time').value;
         var dur = form.querySelector('input[name="duration_hours"]:checked');
-        var addr = form.querySelector('#address').value;
+        
+        // 주소 찾기: 비회원 주소 또는 일반 주소
+        var addr = form.querySelector('#guest_address') ? form.querySelector('#guest_address').value : '';
+        if (!addr) {
+            addr = form.querySelector('#address') ? form.querySelector('#address').value : '';
+        }
+        
+        // 상세 주소 찾기
+        var addrDetail = form.querySelector('#guest_address_detail') ? form.querySelector('#guest_address_detail').value : '';
+        if (!addrDetail) {
+            addrDetail = form.querySelector('#address_detail') ? form.querySelector('#address_detail').value : '';
+        }
+        
+        // 전체 주소 조합
+        var fullAddr = addr;
+        if (addrDetail) {
+            fullAddr = addr + ' ' + addrDetail;
+        }
+        
         var h = dur ? parseInt(dur.value, 10) : 0;
         var price = h * ratePerHour;
+        
         document.getElementById('summary-service').textContent = svc ? svc.value : '-';
         document.getElementById('summary-datetime').textContent = (dt && tm) ? dt + ' ' + tm : '-';
         document.getElementById('summary-duration').textContent = h ? h + '시간' : '-';
-        document.getElementById('summary-address').textContent = addr || '-';
+        document.getElementById('summary-address').textContent = fullAddr || '-';
         document.getElementById('summary-price').textContent = price ? price.toLocaleString() + '원' : '-';
+        
+        console.log('주문 요약 업데이트:', {
+            service: svc ? svc.value : null,
+            datetime: (dt && tm) ? dt + ' ' + tm : null,
+            duration: h,
+            address: fullAddr,
+            price: price
+        });
     }
 
     form.querySelectorAll('input[name="duration_hours"]').forEach(function(r) {
@@ -488,12 +558,61 @@ $minDate = date('Y-m-d');
     }
 
     btnPrev.addEventListener('click', function() {
-        if (step() > 1) setStep(step() - 1);
+        if (step() === 1.5) {
+            setStep(1);
+        } else if (step() > 1) {
+            setStep(step() - 1);
+        }
     });
     btnNext.addEventListener('click', function() {
         if (!validateStep(step())) return;
+        
+        // Step 1: 회원/비회원 선택 처리
+        if (step() === 1) {
+            var userTypeRadio = form.querySelector('input[name="user_type"]:checked');
+            if (userTypeRadio) {
+                var userType = userTypeRadio.value;
+                var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
+                
+                if (userType === 'member') {
+                    // 회원 선택 시: 로그인되어 있으면 Step 1.5로, 아니면 로그인 페이지로
+                    if (isLoggedIn) {
+                        setStep(1.5);
+                    } else {
+                        window.location.href = apiBase + '/auth/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    }
+                    return;
+                } else if (userType === 'non-member') {
+                    // 비회원 선택 시 정보 입력 단계로
+                    setStep(1.5);
+                    return;
+                }
+            }
+        }
+        
+        // Step 1.5: 비회원 정보 입력 완료 시 Step 2로 이동
+        if (step() === 1.5) {
+            setStep(2);
+            return;
+        }
+        
         if (step() < 5) {
-            setStep(step() + 1);
+            var nextStep = step() + 1;
+            
+            // Step 5 (결제 단계)로 이동하기 전에 로그인 체크
+            if (nextStep === 5) {
+                // 로그인 여부 확인 및 비회원 예외 처리
+                var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
+                var isGuest = form.querySelector('input[name="user_type"][value="non-member"]:checked');
+                
+                if (!isLoggedIn && !isGuest) {
+                    alert('결제를 진행하려면 로그인이 필요합니다.');
+                    window.location.href = apiBase + '/auth/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+            }
+            
+            setStep(nextStep);
             if (step() === 5) {
                 updateSummary();
                 // Step 5 도달 시 결제위젯 초기화
@@ -524,7 +643,7 @@ $minDate = date('Y-m-d');
         }
     });
 
-    setStep(1);
+    setStep(<?= $initialStep ?>);
     
     // 토스페이먼츠 결제위젯 전역 변수
     var paymentWidget = null;
@@ -553,7 +672,11 @@ $minDate = date('Y-m-d');
         
         try {
             var clientKey = '<?= TOSS_CLIENT_KEY ?>';
-            var customerKey = '<?= $currentUser['id'] ?>';
+            // 비회원이면 임의의 키 생성 (실제로는 세션/쿠키 기반이 좋으나 간단히 처리)
+            var customerKey = '<?= $currentUser ? $currentUser['id'] : "" ?>';
+            if (!customerKey) {
+                customerKey = 'guest_' + Math.random().toString(36).substring(2, 12);
+            }
             
             console.log('결제위젯 초기화 시작...');
             console.log('Client Key:', clientKey ? (clientKey.substring(0, 10) + '...') : '없음');
@@ -673,17 +796,60 @@ $minDate = date('Y-m-d');
                 var radios = form.querySelectorAll('input[name="duration_hours"]:checked');
                 if (radios.length) durationHours = parseInt(radios[0].value, 10) || 0;
                 
+                // 비회원 정보 수집
+                var guestName = formData.get('guest_name') || '';
+                var guestPhone = formData.get('guest_phone') || '';
+                var guestAddress = formData.get('guest_address') || '';
+                var guestAddressDetail = formData.get('guest_address_detail') || '';
+                
+                // 회원 정보 (PHP에서 전달)
+                var userAddress = '<?= $currentUser && isset($currentUser['address']) ? htmlspecialchars($currentUser['address'], ENT_QUOTES) : "" ?>';
+                var userAddressDetail = '<?= $currentUser && isset($currentUser['address_detail']) ? htmlspecialchars($currentUser['address_detail'], ENT_QUOTES) : "" ?>';
+                var userPhone = '<?= $currentUser && isset($currentUser['phone']) ? htmlspecialchars($currentUser['phone'], ENT_QUOTES) : "" ?>';
+                
+                // 주소: 회원 > 폼 입력 > 비회원 순으로 우선순위
+                var address = formData.get('address') || '';
+                if (!address && userAddress) {
+                    address = userAddress; // 회원 주소 사용
+                }
+                if (!address && guestAddress) {
+                    address = guestAddress; // 비회원 주소 사용
+                }
+                
+                // 상세 주소: 회원 > 폼 입력 > 비회원 순으로 우선순위
+                var addressDetail = formData.get('address_detail') || '';
+                if (!addressDetail && userAddressDetail) {
+                    addressDetail = userAddressDetail; // 회원 상세 주소 사용
+                }
+                if (!addressDetail && guestAddressDetail) {
+                    addressDetail = guestAddressDetail; // 비회원 상세 주소 사용
+                }
+                
+                // 전화번호: 회원 > 폼 입력 > 비회원 순으로 우선순위
+                var phone = formData.get('phone') || '';
+                if (!phone && userPhone) {
+                    phone = userPhone; // 회원 전화번호 사용
+                }
+                if (!phone && guestPhone) {
+                    phone = guestPhone; // 비회원 전화번호 사용
+                }
+                
                 var serviceData = {
                     service_type: formData.get('service_type'),
                     service_date: formData.get('service_date'),
                     start_time: formData.get('start_time'),
                     duration_hours: durationHours,
-                    address: formData.get('address'),
-                    address_detail: formData.get('address_detail') || '',
-                    phone: formData.get('phone') || '',
-                    lat: formData.get('lat'),
-                    lng: formData.get('lng'),
-                    details: formData.get('details') || ''
+                    address: address,
+                    address_detail: addressDetail,
+                    phone: phone,
+                    lat: formData.get('lat') || '',
+                    lng: formData.get('lng') || '',
+                    details: formData.get('details') || '',
+                    // 비회원 정보
+                    guest_name: guestName,
+                    guest_phone: guestPhone,
+                    guest_address: guestAddress,
+                    guest_address_detail: guestAddressDetail
                 };
                 
                 console.log('서비스 요청 데이터:', serviceData);
@@ -695,6 +861,7 @@ $minDate = date('Y-m-d');
                 var saveResponse = await fetch(saveUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // 세션 쿠키 포함
                     body: JSON.stringify(serviceData)
                 });
                 
@@ -702,8 +869,17 @@ $minDate = date('Y-m-d');
                 
                 if (!saveResponse.ok) {
                     var errorText = await saveResponse.text();
-                    console.error('API 오류 응답:', errorText);
-                    alert('서비스 요청 저장에 실패했습니다. (HTTP ' + saveResponse.status + ')');
+                    console.error('API 오류 응답 (원본):', errorText);
+                    
+                    // JSON 파싱 시도
+                    try {
+                        var errorJson = JSON.parse(errorText);
+                        console.error('API 오류 응답 (파싱됨):', errorJson);
+                        alert('서비스 요청 저장에 실패했습니다:\n' + (errorJson.error || errorJson.message || '알 수 없는 오류'));
+                    } catch (e) {
+                        console.error('JSON 파싱 실패:', e);
+                        alert('서비스 요청 저장에 실패했습니다. (HTTP ' + saveResponse.status + ')\n\n응답: ' + errorText.substring(0, 200));
+                    }
                     return;
                 }
                 
@@ -711,7 +887,7 @@ $minDate = date('Y-m-d');
                 console.log('API 응답:', saveResult);
                 
                 if (!saveResult.ok || !saveResult.request_id) {
-                    alert('서비스 요청 저장에 실패했습니다: ' + (saveResult.error || '알 수 없는 오류'));
+                    alert('서비스 요청 저장에 실패했습니다:\n' + (saveResult.error || saveResult.message || '알 수 없는 오류'));
                     return;
                 }
                 
@@ -719,6 +895,22 @@ $minDate = date('Y-m-d');
                 var orderName = document.getElementById('summary-service').textContent + ' 서비스';
                 
                 console.log('결제 요청:', { orderId, orderName });
+                
+                // 결제 수단 선택 확인
+                if (paymentMethodWidget && typeof paymentMethodWidget.getSelectedPaymentMethod === 'function') {
+                    try {
+                        var selectedMethod = paymentMethodWidget.getSelectedPaymentMethod();
+                        console.log('선택된 결제 수단:', selectedMethod);
+                        
+                        if (!selectedMethod || !selectedMethod.method) {
+                            alert('결제 수단을 선택해주세요.\n\n위의 결제 방법 중 하나를 선택한 후 다시 시도해주세요.');
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('결제 수단 확인 중 오류:', e);
+                        // 계속 진행 (일부 SDK 버전에서는 지원하지 않을 수 있음)
+                    }
+                }
                 
                 // SDK v1: requestPayment는 Promise를 반환하지 않음 (리다이렉트 방식)
                 var baseUrl = '<?= $base ?>';
@@ -737,17 +929,72 @@ $minDate = date('Y-m-d');
                 
                 // 결제 요청 (SDK v1은 리다이렉트 방식)
                 try {
-                    paymentWidget.requestPayment({
-                        orderId: orderId,
-                        orderName: orderName,
-                        successUrl: successUrl,
-                        failUrl: failUrl,
-                        customerEmail: '<?= htmlspecialchars($currentUser['email']) ?>',
-                        customerName: '<?= htmlspecialchars($currentUser['name']) ?>',
+                    // 고객 정보 설정 (비회원인 경우 입력한 이름 사용)
+                    var custName = '<?= $currentUser ? htmlspecialchars($currentUser['name']) : "" ?>';
+                    var custEmail = '<?= $currentUser ? htmlspecialchars($currentUser['email']) : "" ?>';
+                    
+                    if (!custName && formData.get('guest_name')) {
+                        custName = formData.get('guest_name');
+                    }
+                    
+                    console.log('결제 요청 시작:', { orderId, orderName, successUrl, failUrl });
+                    
+                    // 전역 에러 핸들러 (Promise rejection 캐치)
+                    var paymentErrorHandler = function(event) {
+                        console.error('결제 에러 이벤트:', event);
+                        var errorMsg = event.detail?.message || event.message || '결제 처리 중 오류가 발생했습니다.';
+                        
+                        if (errorMsg.includes('카드 결제 정보를 선택') || errorMsg.includes('결제 수단')) {
+                            alert('결제 수단을 선택해주세요.\n\n위의 결제 방법 중 하나를 선택한 후 다시 시도해주세요.');
+                        } else {
+                            alert('결제 처리 중 오류가 발생했습니다:\n\n' + errorMsg);
+                        }
+                    };
+                    
+                    // 에러 이벤트 리스너 추가
+                    window.addEventListener('unhandledrejection', function(event) {
+                        console.error('Unhandled Promise Rejection:', event.reason);
+                        if (event.reason && (event.reason.message || String(event.reason)).includes('카드 결제')) {
+                            event.preventDefault(); // 기본 에러 처리 방지
+                            alert('결제 수단을 선택해주세요.\n\n위의 결제 방법 중 하나를 선택한 후 다시 시도해주세요.');
+                        }
                     });
+                    
+                    // Promise로 감싸서 처리
+                    try {
+                        var paymentPromise = Promise.resolve(paymentWidget.requestPayment({
+                            orderId: orderId,
+                            orderName: orderName,
+                            successUrl: successUrl,
+                            failUrl: failUrl,
+                            customerEmail: custEmail,
+                            customerName: custName,
+                        }));
+                        
+                        // Promise가 반환되면 처리
+                        if (paymentPromise && typeof paymentPromise.then === 'function') {
+                            paymentPromise.catch(function(error) {
+                                console.error('결제 Promise 에러:', error);
+                                var errorMsg = error?.message || String(error);
+                                if (errorMsg.includes('카드 결제') || errorMsg.includes('결제 수단')) {
+                                    alert('결제 수단을 선택해주세요.\n\n위의 결제 방법 중 하나를 선택한 후 다시 시도해주세요.');
+                                } else {
+                                    alert('결제 처리 중 오류가 발생했습니다:\n\n' + errorMsg);
+                                }
+                            });
+                        }
+                    } catch (error) {
+                        console.error('결제 요청 동기 에러:', error);
+                        var errorMsg = error?.message || String(error);
+                        if (errorMsg.includes('카드 결제') || errorMsg.includes('결제 수단')) {
+                            alert('결제 수단을 선택해주세요.\n\n위의 결제 방법 중 하나를 선택한 후 다시 시도해주세요.');
+                        } else {
+                            alert('결제창을 열 수 없습니다:\n\n' + errorMsg);
+                        }
+                    }
                 } catch (error) {
-                    console.error('결제 요청 오류:', error);
-                    alert('결제창을 열 수 없습니다: ' + (error.message || '알 수 없는 오류'));
+                    console.error('결제 요청 외부 에러:', error);
+                    alert('결제 처리 중 오류가 발생했습니다:\n\n' + (error.message || '알 수 없는 오류'));
                 }
             } catch (error) {
                 console.error('결제 요청 오류:', error);
@@ -756,6 +1003,140 @@ $minDate = date('Y-m-d');
         });
     }
     
+    // ===== 비회원 주소 검색 기능 (Step 1.5) =====
+    var btnGuestAddr = document.getElementById('btn-guest-address-search');
+    var guestMsgEl = document.getElementById('guest-address-search-msg');
+    var guestAddrInput = document.getElementById('guest_address');
+    var guestResultsDiv = document.getElementById('guest-address-results');
+    
+    // 디버깅: 요소 존재 확인
+    console.log('비회원 주소 검색 요소 확인:', {
+        btnGuestAddr: btnGuestAddr,
+        guestMsgEl: guestMsgEl,
+        guestAddrInput: guestAddrInput,
+        guestResultsDiv: guestResultsDiv
+    });
+    
+    function updateGuestAddrBtn() {
+        if (!btnGuestAddr || !guestAddrInput) {
+            console.log('비회원 요소 못찾음');
+            return;
+        }
+        var hasValue = guestAddrInput.value.trim().length > 0;
+        btnGuestAddr.disabled = !hasValue;
+        console.log('버튼 상태:', hasValue ? '활성화' : '비활성화');
+    }
+    
+    // 이벤트 리스너 등록
+    if (guestAddrInput) {
+        guestAddrInput.addEventListener('input', updateGuestAddrBtn);
+        guestAddrInput.addEventListener('change', updateGuestAddrBtn);
+        console.log('비회원 이벤트 리스너 등록됨');
+    }
+    
+    // 초기 상태 설정
+    updateGuestAddrBtn();
+    
+    // 주소 검색 기능
+    function clearGuestResults() {
+        if (guestResultsDiv) {
+            guestResultsDiv.classList.add('hidden');
+            guestResultsDiv.innerHTML = '';
+        }
+    }
+    
+    function selectGuestAddress(item) {
+        if (guestAddrInput) {
+            guestAddrInput.value = item.address;
+            console.log('주소 선택됨:', item.address);
+        }
+        guestMsgEl.textContent = '주소가 선택되었습니다.';
+        guestMsgEl.classList.remove('text-red-600', 'text-gray-600');
+        guestMsgEl.classList.add('text-green-600');
+        clearGuestResults();
+    }
+    
+    // 검색 버튼 클릭 이벤트
+    if (btnGuestAddr && guestMsgEl) {
+        btnGuestAddr.addEventListener('click', function() {
+            console.log('비회원 검색 버튼 클릭됨');
+            var addr = (guestAddrInput && guestAddrInput.value) ? guestAddrInput.value.trim() : '';
+            
+            guestMsgEl.textContent = '';
+            guestMsgEl.classList.remove('text-red-600', 'text-green-600', 'text-gray-600');
+            clearGuestResults();
+            
+            if (!addr) {
+                guestMsgEl.textContent = '주소를 입력한 뒤 검색해주세요.';
+                guestMsgEl.classList.add('text-red-600');
+                return;
+            }
+            
+            btnGuestAddr.disabled = true;
+            btnGuestAddr.textContent = '검색 중…';
+            
+            var url = apiBase + '/api/address-suggest?keyword=' + encodeURIComponent(addr) + '&debug=1';
+            console.log('API 호출:', url);
+            
+            fetch(url)
+                .then(function(r) {
+                    console.log('응답 상태:', r.status, r.statusText);
+                    console.log('Content-Type:', r.headers.get('content-type'));
+                    
+                    // 텍스트로 먼저 읽어서 확인
+                    return r.text().then(function(text) {
+                        console.log('원본 응답 텍스트:', text.substring(0, 500)); // 처음 500자만
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('JSON 파싱 실패:', e);
+                            console.error('전체 응답:', text);
+                            throw new Error('JSON 파싱 실패: ' + e.message + '\n응답: ' + text.substring(0, 200));
+                        }
+                    });
+                })
+                .then(function(res) {
+                    console.log('API 응답 (파싱됨):', res);
+                    if (res.success && res.items && res.items.length > 0) {
+                        if (res.items.length === 1) {
+                            // 결과 1개: 자동 선택
+                            selectGuestAddress(res.items[0]);
+                        } else {
+                            // 결과 여러 개: 목록 표시
+                            guestMsgEl.textContent = '아래에서 주소를 선택해주세요 (' + res.items.length + '개)';
+                            guestMsgEl.classList.add('text-gray-600');
+                            
+                            if (guestResultsDiv) {
+                                guestResultsDiv.classList.remove('hidden');
+                                guestResultsDiv.innerHTML = '';
+                                res.items.forEach(function(item) {
+                                    var btn = document.createElement('button');
+                                    btn.type = 'button';
+                                    btn.className = 'flex min-h-[44px] w-full items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-left text-sm hover:bg-primary hover:text-white focus:bg-primary focus:text-white transition-colors';
+                                    btn.textContent = item.address;
+                                    btn.addEventListener('click', function() { selectGuestAddress(item); });
+                                    guestResultsDiv.appendChild(btn);
+                                });
+                            }
+                        }
+                    } else {
+                        guestMsgEl.textContent = res.message || '일치하는 주소를 찾지 못했습니다.';
+                        guestMsgEl.classList.add('text-red-600');
+                    }
+                })
+                .catch(function(err) {
+                    console.error('API 호출 오류:', err);
+                    guestMsgEl.textContent = '주소 검색 중 오류가 발생했습니다.';
+                    guestMsgEl.classList.add('text-red-600');
+                })
+                .finally(function() {
+                    btnGuestAddr.disabled = !(guestAddrInput && guestAddrInput.value.trim());
+                    btnGuestAddr.textContent = '주소 검색';
+                });
+        });
+    }
+
+
 })();
 </script>
 <?php

@@ -17,7 +17,7 @@ init_session();
 if (!empty($_SESSION['user_id'])) {
     try {
         $pdo = require dirname(__DIR__) . '/database/connect.php';
-        $st = $pdo->prepare('SELECT id, email, name, role FROM users WHERE id = ? AND is_active = 1');
+        $st = $pdo->prepare('SELECT id, email, name, role, phone, address, address_detail FROM users WHERE id = ? AND is_active = 1');
         $st->execute([$_SESSION['user_id']]);
         $row = $st->fetch();
         if ($row) {

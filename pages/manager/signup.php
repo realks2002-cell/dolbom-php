@@ -4,7 +4,9 @@
  * URL: /manager/signup
  */
 require_once dirname(__DIR__, 2) . '/config/app.php';
+require_once dirname(__DIR__, 2) . '/config/encryption.php';
 require_once dirname(__DIR__, 2) . '/includes/helpers.php';
+require_once dirname(__DIR__, 2) . '/includes/security.php';
 
 init_session();
 
@@ -47,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = '은행을 선택해주세요.';
     } elseif ($accountNumber === '') {
         $error = '계좌번호를 입력해주세요.';
-    } elseif (strlen($password) < 8) {
-        $error = '비밀번호는 8자 이상 입력해주세요.';
+    } elseif (strlen($password) < 6) {
+        $error = '비밀번호는 6자 이상 입력해주세요.';
     } elseif ($password !== $passwordConfirm) {
         $error = '비밀번호가 일치하지 않습니다.';
     } else {
@@ -82,10 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = '이미 등록된 전화번호 또는 주민번호입니다.';
         } else {
             $hash = password_hash($password, PASSWORD_DEFAULT);
+            $encryptedSsn = encrypt_ssn($ssn); // 주민번호 암호화
             $st = $pdo->prepare('INSERT INTO managers (name, ssn, phone, address1, address2, account_number, bank, specialty, photo, gender, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $st->execute([
                 $name,
-                $ssn,
+                $encryptedSsn, // 암호화된 주민번호
                 $phone,
                 $address1,
                 $address2 === '' ? null : $address2,
@@ -308,7 +311,7 @@ $pageTitle = '매니저 회원가입 - ' . APP_NAME;
                             id="password" 
                             name="password" 
                             class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                            placeholder="8자 이상"
+                            placeholder="6자 이상"
                             required
                             autocomplete="new-password">
                     </div>
@@ -321,7 +324,7 @@ $pageTitle = '매니저 회원가입 - ' . APP_NAME;
                             id="password_confirm" 
                             name="password_confirm" 
                             class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                            placeholder="비밀번호 재입력"
+                            placeholder="6자리"
                             required
                             autocomplete="new-password">
                     </div>

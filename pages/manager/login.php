@@ -118,7 +118,7 @@ ob_start();
                                     id="password" 
                                     name="password" 
                                     class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                                    placeholder="비밀번호 입력"
+                                    placeholder="6자리"
                                     required 
                                     autocomplete="off"
                                     readonly

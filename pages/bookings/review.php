@@ -7,7 +7,7 @@ require_once dirname(__DIR__, 2) . '/config/app.php';
 $pageTitle = '리뷰 작성 - ' . APP_NAME;
 $mainClass = 'min-h-screen bg-gray-50 py-8';
 $base = rtrim(BASE_URL, '/');
-$bookingId = $_GET['id'] ?? null;
+$bookingId = $_GET['booking_id'] ?? $_GET['id'] ?? null;
 ob_start();
 ?>
 <div class="mx-auto max-w-2xl px-4 sm:px-6">

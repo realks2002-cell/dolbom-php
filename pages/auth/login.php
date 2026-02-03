@@ -8,6 +8,19 @@ require_once dirname(__DIR__, 2) . '/config/app.php';
 require_once dirname(__DIR__, 2) . '/includes/helpers.php';
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 
+// security.php가 없으면 기본 함수 정의
+if (file_exists(dirname(__DIR__, 2) . '/includes/security.php')) {
+    require_once dirname(__DIR__, 2) . '/includes/security.php';
+} else {
+    // 기본 CSRF 함수 (security.php 없을 때)
+    if (!function_exists('csrf_field')) {
+        function csrf_field() { return ''; }
+    }
+    if (!function_exists('verify_csrf_token')) {
+        function verify_csrf_token($token) { return true; }
+    }
+}
+
 $base = rtrim(BASE_URL, '/');
 $error = '';
 
@@ -23,12 +36,17 @@ function normalize_phone($phone) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $phone = trim((string) ($_POST['phone'] ?? ''));
-    $password = (string) ($_POST['password'] ?? '');
-
-    if ($phone === '' || $password === '') {
-        $error = '전화번호와 비밀번호를 입력해주세요.';
+    // CSRF 토큰 검증
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!verify_csrf_token($csrfToken)) {
+        $error = '보안 토큰이 유효하지 않습니다. 페이지를 새로고침하고 다시 시도해주세요.';
     } else {
+        $phone = trim((string) ($_POST['phone'] ?? ''));
+        $password = (string) ($_POST['password'] ?? '');
+
+        if ($phone === '' || $password === '') {
+            $error = '전화번호와 비밀번호를 입력해주세요.';
+        } else {
         // 전화번호 정규화 (하이픈 제거)
         $normalizedPhone = normalize_phone($phone);
         
@@ -47,14 +65,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_role'] = $user['role'];
             $pdo->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')->execute([$user['id']]);
 
+            // redirect 파라미터 확인
+            $redirect = $_GET['redirect'] ?? '';
+            
             if ($user['role'] === ROLE_MANAGER) {
-                redirect('/manager/requests');
+                redirect($redirect ?: '/manager/requests');
             }
             if ($user['role'] === ROLE_ADMIN) {
-                redirect('/admin');
+                redirect($redirect ?: '/admin');
             }
-            redirect('/');
+            redirect($redirect ?: '/');
         }
+    }
     }
 }
 
@@ -70,6 +92,7 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
     <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
     <form class="mt-6 space-y-4" action="<?= $base ?>/auth/login" method="post" autocomplete="off">
+        <?= csrf_field() ?>
         <div>
             <label for="phone" class="block text-base font-medium text-gray-700">전화번호</label>
             <input type="tel" id="phone" name="phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-lg" placeholder="01012345678" pattern="[0-9]*" inputmode="numeric" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
@@ -78,7 +101,7 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
         <div>
             <label for="password" class="block text-base font-medium text-gray-700">비밀번호</label>
             <div class="relative">
-                <input type="password" id="password" name="password" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-lg" placeholder="비밀번호 입력" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+                <input type="password" id="password" name="password" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-lg" placeholder="6자리" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
                 <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700" onclick="togglePassword()" aria-label="비밀번호 표시/숨기기">
                     <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>

@@ -25,6 +25,7 @@ $currentUser = $currentUser ?? null;
             <a href="<?= $base ?>/service-guide" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">서비스이용</a>
             <a href="<?= $base ?>/manager/recruit" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">매니저 지원</a>
             <a href="<?= $base ?>/faq" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">자주묻는 질문</a>
+            <a href="<?= $base ?>/bookings/guest-check" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">예약조회</a>
             <?php if (isset($userRole) && $userRole === ROLE_CUSTOMER): ?>
                 <a href="<?= $base ?>/requests/new" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">서비스 요청</a>
                 <a href="<?= $base ?>/bookings" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">내 예약</a>
@@ -33,7 +34,7 @@ $currentUser = $currentUser ?? null;
                 <a href="<?= $base ?>/manager/schedule" class="text-lg text-gray-900 hover:text-orange-600 font-medium transition-colors">내 일정</a>
             <?php endif; ?>
             <?php if ($userRole === null): ?>
-                <a href="<?= $base ?>/auth/login" class="text-lg px-6 py-3 rounded-full font-semibold transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 text-gray-900 hover:text-orange-600">로그인</a>
+                <a href="<?= $base ?>/auth/login" class="text-lg px-6 py-3 rounded-full font-semibold transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 text-gray-900 hover:text-orange-600">회원 로그인</a>
                 <a href="<?= $base ?>/auth/signup" class="text-lg px-6 py-3 rounded-full font-semibold transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20">회원가입</a>
             <?php else: ?>
                 <span class="text-base text-gray-900"><?= $currentUser ? htmlspecialchars($currentUser['name']) : '' ?> 님</span>
@@ -54,6 +55,7 @@ $currentUser = $currentUser ?? null;
             <a href="<?= $base ?>/service-guide" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">서비스이용</a>
             <a href="<?= $base ?>/manager/recruit" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">매니저 지원</a>
             <a href="<?= $base ?>/faq" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">자주묻는 질문</a>
+            <a href="<?= $base ?>/bookings/guest-check" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">예약조회</a>
             <?php if (isset($userRole) && $userRole === ROLE_CUSTOMER): ?>
                 <a href="<?= $base ?>/requests/new" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">서비스 요청</a>
                 <a href="<?= $base ?>/bookings" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">내 예약</a>
@@ -62,7 +64,7 @@ $currentUser = $currentUser ?? null;
                 <a href="<?= $base ?>/manager/schedule" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">내 일정</a>
             <?php endif; ?>
             <?php if ($userRole === null): ?>
-                <a href="<?= $base ?>/auth/login" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">로그인</a>
+                <a href="<?= $base ?>/auth/login" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-100">회원 로그인</a>
                 <a href="<?= $base ?>/auth/signup" class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600">회원가입</a>
             <?php else: ?>
                 <div class="min-h-[44px] flex items-center px-4 py-2 text-base font-medium text-gray-900"><?= $currentUser ? htmlspecialchars($currentUser['name']) : '' ?> 님</div>

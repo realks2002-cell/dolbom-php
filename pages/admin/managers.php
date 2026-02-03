@@ -4,8 +4,10 @@
  * URL: /admin/managers
  */
 require_once dirname(__DIR__, 2) . '/config/app.php';
+require_once dirname(__DIR__, 2) . '/config/encryption.php';
 require_once dirname(__DIR__, 2) . '/includes/helpers.php';
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
+require_once dirname(__DIR__, 2) . '/includes/security.php';
 
 require_admin();
 
@@ -80,7 +82,7 @@ ob_start();
                     <tr>
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['id']) ?></td>
                         <td class="px-4 py-3 text-sm font-medium text-gray-900"><?= htmlspecialchars($manager['name']) ?></td>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['ssn']) ?></td>
+                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars(mask_ssn(decrypt_ssn($manager['ssn']))) ?></td>
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($manager['phone']) ?></td>
                         <td class="px-4 py-3 text-sm text-gray-900">
                             <?= htmlspecialchars($manager['address1']) ?>

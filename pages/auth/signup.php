@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $passwordConfirm = (string) ($_POST['password_confirm'] ?? '');
     $name = trim((string) ($_POST['name'] ?? ''));
     $phone = trim((string) ($_POST['phone'] ?? ''));
+    $address = trim((string) ($_POST['address'] ?? ''));
+    $addressDetail = trim((string) ($_POST['address_detail'] ?? ''));
     $terms = !empty($_POST['terms']);
 
     if (!$terms) {
@@ -30,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = '역할을 선택해주세요.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = '올바른 이메일을 입력해주세요.';
-    } elseif (strlen($password) < 8) {
-        $error = '비밀번호는 8자 이상 입력해주세요.';
+    } elseif (strlen($password) < 6) {
+        $error = '비밀번호는 6자 이상 입력해주세요.';
     } elseif ($password !== $passwordConfirm) {
         $error = '비밀번호가 일치하지 않습니다.';
     } elseif ($name === '') {
@@ -45,14 +47,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $id = uuid4();
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $st = $pdo->prepare('INSERT INTO users (id, email, password_hash, name, phone, role) VALUES (?, ?, ?, ?, ?, ?)');
-            $st->execute([$id, $email, $hash, $name, $phone === '' ? null : $phone, $role]);
+            $st = $pdo->prepare('INSERT INTO users (id, email, password_hash, name, phone, address, address_detail, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            $st->execute([
+                $id,
+                $email,
+                $hash,
+                $name,
+                $phone === '' ? null : $phone,
+                $address === '' ? null : $address,
+                $addressDetail === '' ? null : $addressDetail,
+                $role
+            ]);
 
             // 회원가입 성공 - 자동 로그인하지 않음
             // 세션에 사용자 정보 저장하지 않음
             
+            // redirect 파라미터 확인
+            $redirect = $_GET['redirect'] ?? '';
+            $redirectParam = $redirect ? '&redirect=' . urlencode($redirect) : '';
+            
             // 페이지 새로고침하여 모달 표시
-            header('Location: ' . $base . '/auth/signup?success=1');
+            header('Location: ' . $base . '/auth/signup?success=1' . $redirectParam);
             exit;
         }
     }
@@ -87,7 +102,7 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
         <div>
             <label for="password" class="block text-base font-medium text-gray-700">비밀번호</label>
             <div class="relative">
-                <input type="password" id="password" name="password" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12" placeholder="8자 이상" required autocomplete="new-password">
+                <input type="password" id="password" name="password" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12" placeholder="6자리" required autocomplete="new-password">
                 <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700" onclick="togglePassword('password')" aria-label="비밀번호 표시/숨기기">
                     <svg id="eye-icon-password" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -102,7 +117,7 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
         <div>
             <label for="password_confirm" class="block text-base font-medium text-gray-700">비밀번호 확인</label>
             <div class="relative">
-                <input type="password" id="password_confirm" name="password_confirm" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12" required autocomplete="new-password">
+                <input type="password" id="password_confirm" name="password_confirm" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 pr-12" placeholder="6자리" required autocomplete="new-password">
                 <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700" onclick="togglePassword('password_confirm')" aria-label="비밀번호 확인 표시/숨기기">
                     <svg id="eye-icon-password_confirm" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -121,6 +136,19 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
         <div>
             <label for="phone" class="block text-base font-medium text-gray-700">전화번호</label>
             <input type="tel" id="phone" name="phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="010-1234-5678" value="<?= $phoneVal ?>">
+        </div>
+        <div>
+            <label for="address" class="block text-base font-medium text-gray-700">주소</label>
+            <div class="mt-1 flex gap-2">
+                <input type="text" id="address" name="address" class="block flex-1 rounded-lg border border-gray-300 px-4 py-3" placeholder="도로명 또는 지번 주소 입력 후 검색" value="<?= htmlspecialchars($_POST['address'] ?? '') ?>" autocomplete="off" aria-describedby="address-search-msg">
+                <button type="button" id="btn-address-search" class="shrink-0 min-h-[44px] min-w-[44px] rounded-lg bg-primary px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>주소 검색</button>
+            </div>
+            <p id="address-search-msg" class="mt-1 text-sm" role="status" aria-live="polite"></p>
+            <div id="address-results" class="mt-2 hidden space-y-1" role="list" aria-label="주소 검색 결과"></div>
+            <div>
+                <label for="address_detail" class="block text-sm font-medium text-gray-700 mt-2">상세 주소 <span class="text-gray-400">(선택)</span></label>
+                <input type="text" id="address_detail" name="address_detail" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="동/호수 등" value="<?= htmlspecialchars($_POST['address_detail'] ?? '') ?>">
+            </div>
         </div>
         <div class="flex items-start gap-2">
             <input type="checkbox" id="terms" name="terms" class="mt-1" <?= !empty($_POST['terms']) ? 'checked' : '' ?> required>
@@ -155,7 +183,11 @@ $phoneVal = htmlspecialchars($_POST['phone'] ?? '');
                         </div>
                         <h3 class="text-2xl font-bold text-gray-900 mb-2">회원등록이 완료 되었습니다.</h3>
                         <p class="text-gray-600 mb-6">환영합니다! 로그인하여 서비스를 이용해보세요.</p>
-                        <a href="<?= $base ?>/auth/login" class="inline-block min-h-[44px] px-6 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-opacity">
+                        <?php 
+                        $redirect = $_GET['redirect'] ?? '';
+                        $loginUrl = $base . '/auth/login' . ($redirect ? '?redirect=' . urlencode($redirect) : '');
+                        ?>
+                        <a href="<?= $loginUrl ?>" class="inline-block min-h-[44px] px-6 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-opacity">
                             로그인하기
                         </a>
                     </div>
@@ -207,6 +239,93 @@ function togglePassword(fieldId) {
         }
     }
 }
+
+// VWorld API 주소 검색 기능
+(function() {
+    var btnAddr = document.getElementById('btn-address-search');
+    var msgEl = document.getElementById('address-search-msg');
+    var addrInput = document.getElementById('address');
+    var resultsDiv = document.getElementById('address-results');
+    var apiBase = '<?= $base ?>';
+    
+    if (!btnAddr || !msgEl || !addrInput) return;
+    
+    function updateAddrBtn() {
+        if (!btnAddr || !addrInput) return;
+        btnAddr.disabled = !addrInput.value.trim();
+    }
+    
+    addrInput.addEventListener('input', updateAddrBtn);
+    addrInput.addEventListener('change', updateAddrBtn);
+    updateAddrBtn();
+    
+    function clearResults() {
+        if (resultsDiv) {
+            resultsDiv.classList.add('hidden');
+            resultsDiv.innerHTML = '';
+        }
+    }
+    
+    function selectAddress(item) {
+        if (addrInput) addrInput.value = item.address;
+        msgEl.textContent = '주소가 선택되었습니다.';
+        msgEl.classList.remove('text-red-600', 'text-gray-600');
+        msgEl.classList.add('text-green-600');
+        clearResults();
+    }
+    
+    btnAddr.addEventListener('click', function() {
+        var addr = addrInput.value.trim();
+        msgEl.textContent = '';
+        msgEl.classList.remove('text-red-600', 'text-green-600', 'text-gray-600');
+        clearResults();
+        
+        if (!addr) {
+            msgEl.textContent = '주소를 입력한 뒤 검색해주세요.';
+            msgEl.classList.add('text-red-600');
+            return;
+        }
+        
+        btnAddr.disabled = true;
+        btnAddr.textContent = '검색 중…';
+        
+        var url = apiBase + '/api/address-suggest?keyword=' + encodeURIComponent(addr);
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.success && res.items && res.items.length > 0) {
+                    // 항상 리스트 표시 (1개여도)
+                        msgEl.textContent = '아래에서 주소를 선택해주세요 (' + res.items.length + '개)';
+                        msgEl.classList.add('text-gray-600');
+                        
+                        if (resultsDiv) {
+                            resultsDiv.classList.remove('hidden');
+                            resultsDiv.innerHTML = '';
+                            res.items.forEach(function(item) {
+                                var btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'flex min-h-[44px] w-full items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-left text-sm hover:bg-primary hover:text-white focus:bg-primary focus:text-white transition-colors';
+                                btn.textContent = item.address;
+                                btn.addEventListener('click', function() { selectAddress(item); });
+                                resultsDiv.appendChild(btn);
+                            });
+                        }
+                } else {
+                    msgEl.textContent = res.message || '일치하는 주소를 찾지 못했습니다.';
+                    msgEl.classList.add('text-red-600');
+                }
+            })
+            .catch(function(err) {
+                msgEl.textContent = '주소 검색 중 오류가 발생했습니다.';
+                msgEl.classList.add('text-red-600');
+                console.error(err);
+            })
+            .finally(function() {
+                btnAddr.disabled = !addrInput.value.trim();
+                btnAddr.textContent = '주소 검색';
+            });
+    });
+})();
 </script>
 <?php
 $layoutContent = ob_get_clean();

@@ -132,9 +132,9 @@ $pageTitle = '매니저 비밀번호 재설정 - ' . APP_NAME;
                                 id="new_password" 
                                 name="new_password" 
                                 class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                                placeholder="8자 이상 입력"
+                                placeholder="6자리"
                                 required 
-                                minlength="8"
+                                minlength="6"
                                 autocomplete="new-password">
                         </div>
 
@@ -145,9 +145,9 @@ $pageTitle = '매니저 비밀번호 재설정 - ' . APP_NAME;
                                 id="confirm_password" 
                                 name="confirm_password" 
                                 class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                                placeholder="비밀번호 다시 입력"
+                                placeholder="6자리"
                                 required 
-                                minlength="8"
+                                minlength="6"
                                 autocomplete="new-password">
                         </div>
 

@@ -32,9 +32,13 @@ $total = $countStmt->fetchColumn();
 $totalPages = ceil($total / $perPage);
 
 $stmt = $pdo->prepare("
-    SELECT p.*, u.name as customer_name, sr.service_type, sr.service_date
+    SELECT 
+        p.*, 
+        COALESCE(u.name, sr.guest_name, '비회원') as customer_name,
+        sr.service_type, 
+        sr.service_date
     FROM payments p
-    JOIN users u ON u.id = p.customer_id
+    LEFT JOIN users u ON u.id = p.customer_id
     LEFT JOIN service_requests sr ON sr.id = p.service_request_id
     WHERE {$where}
     ORDER BY p.created_at DESC

@@ -8,7 +8,7 @@
 require_once dirname(__DIR__) . '/config/app.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 $base = rtrim(BASE_URL, '/');
-$ctaHref = $currentUser ? $base . '/requests/new' : $base . '/auth/signup';
+$ctaHref = $base . '/requests/new';
 $pageTitle = APP_NAME . ' - 믿을 수 있는 병원동행과 돌봄 서비스';
 $mainClass = 'min-h-screen pt-0';
 
