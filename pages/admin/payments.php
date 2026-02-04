@@ -88,12 +88,12 @@ ob_start();
                     <?php if (count($payments) > 0): ?>
                     <?php foreach ($payments as $payment): ?>
                     <tr>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($payment['paid_at'] ?? $payment['created_at']) ?></td>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($payment['customer_name']) ?></td>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($payment['service_type'] ?? '-') ?></td>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($payment['payment_method']) ?></td>
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900"><?= number_format($payment['amount']) ?>원</td>
-                        <td class="px-4 py-3 text-sm">
+                        <td class="px-4 py-3 text-[11px] text-gray-900"><?= htmlspecialchars($payment['paid_at'] ?? $payment['created_at']) ?></td>
+                        <td class="px-4 py-3 text-[11px] text-gray-900"><?= htmlspecialchars($payment['customer_name']) ?></td>
+                        <td class="px-4 py-3 text-[11px] text-gray-900"><?= htmlspecialchars($payment['service_type'] ?? '-') ?></td>
+                        <td class="px-4 py-3 text-[11px] text-gray-900"><?= htmlspecialchars($payment['payment_method']) ?></td>
+                        <td class="px-4 py-3 text-[11px] font-medium text-gray-900"><?= number_format($payment['amount']) ?>원</td>
+                        <td class="px-4 py-3 text-[11px]">
                             <span class="px-2 py-1 text-xs font-medium rounded-full <?php
                                 echo match($payment['status']) {
                                     'SUCCESS' => 'bg-green-100 text-green-800',
@@ -116,9 +116,9 @@ ob_start();
                                 ?>
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= $payment['refund_amount'] ? number_format($payment['refund_amount']) . '원' : '-' ?></td>
-                        <td class="px-4 py-3 text-sm text-gray-900"><?= $payment['refunded_at'] ? htmlspecialchars($payment['refunded_at']) : '-' ?></td>
-                        <td class="px-4 py-3 text-sm text-center">
+                        <td class="px-4 py-3 text-[11px] text-gray-900"><?= $payment['refund_amount'] ? number_format($payment['refund_amount']) . '원' : '-' ?></td>
+                        <td class="px-4 py-3 text-[11px] text-gray-900"><?= $payment['refunded_at'] ? htmlspecialchars($payment['refunded_at']) : '-' ?></td>
+                        <td class="px-4 py-3 text-[11px] text-center">
                             <?php
                             $canRefund = in_array($payment['status'], ['SUCCESS', 'PARTIAL_REFUNDED']);
                             $refunded = (int)($payment['refund_amount'] ?? 0);

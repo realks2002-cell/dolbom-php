@@ -58,84 +58,20 @@ try {
     $st2->execute([$requestId, 'SUCCESS']);
     $payment = $st2->fetch();
     
-    $refundSuccess = false;
-    $refundError = null;
-    
-    // 결제가 있으면 환불 처리
-    if ($payment && $payment['payment_key']) {
-        // 토스페이먼츠 환불 API 호출
-        $url = 'https://api.tosspayments.com/v1/payments/' . urlencode($payment['payment_key']) . '/cancel';
-        $data = [
-            'cancelReason' => '비회원 고객 요청에 의한 취소'
-        ];
-        
-        $credential = base64_encode(TOSS_SECRET_KEY . ':');
-        
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Basic ' . $credential,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_CONNECTTIMEOUT => 10,
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-        
-        if ($httpCode === 200) {
-            $refundResult = json_decode($response, true);
-            if (isset($refundResult['status']) && $refundResult['status'] === 'CANCELED') {
-                $refundSuccess = true;
-                
-                // payments 테이블 업데이트
-                try {
-                    $st3 = $pdo->prepare('UPDATE payments SET status = ?, refund_amount = ?, refund_reason = ?, refunded_at = NOW() WHERE id = ?');
-                    $st3->execute(['REFUNDED', $payment['amount'], '비회원 고객 요청에 의한 취소', $payment['id']]);
-                } catch (PDOException $e) {
-                    error_log("비회원 환불 - payments 테이블 업데이트 오류: " . $e->getMessage());
-                }
-            } else {
-                $refundError = $refundResult['message'] ?? '환불 처리 실패';
-            }
-        } else {
-            $refundError = '환불 API 호출 실패 (HTTP ' . $httpCode . ')';
-            if ($curlError) {
-                $refundError .= ': ' . $curlError;
-            }
-        }
-    }
-    
-    // 서비스 요청 상태를 CANCELLED로 변경
+    // 서비스 요청 상태를 CANCELLED로 변경 (관리자 확인 후 환불 처리)
     $st4 = $pdo->prepare('UPDATE service_requests SET status = ? WHERE id = ?');
     $st4->execute(['CANCELLED', $requestId]);
     
     // 트랜잭션 커밋
     $pdo->commit();
     
-    if ($payment && !$refundSuccess) {
-        // 환불 실패했지만 취소는 진행
-        echo json_encode([
-            'ok' => true,
-            'cancelled' => true,
-            'refund_warning' => '예약은 취소되었지만 환불 처리에 실패했습니다. 고객센터로 문의해주세요.',
-            'refund_error' => $refundError
-        ]);
-    } else {
-        echo json_encode([
-            'ok' => true,
-            'cancelled' => true,
-            'refunded' => $refundSuccess
-        ]);
-    }
+    // 관리자 확인 후 환불 처리 안내
+    echo json_encode([
+        'ok' => true,
+        'cancelled' => true,
+        'pending_admin_approval' => true,
+        'has_payment' => !empty($payment)
+    ]);
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();

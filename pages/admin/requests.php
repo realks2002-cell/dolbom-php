@@ -31,12 +31,20 @@ $countStmt->execute($params);
 $total = $countStmt->fetchColumn();
 $totalPages = ceil($total / $perPage);
 
-// 서비스 요청 조회 (매니저 정보 포함)
+// 서비스 요청 조회 (매니저 정보 포함 - 지정 도우미 및 매칭된 도우미)
 $stmt = $pdo->prepare("
-    SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name, b.manager_id as assigned_manager_id
+    SELECT sr.*, 
+           COALESCE(u.name, sr.guest_name, '비회원') as customer_name, 
+           b.manager_id as assigned_manager_id,
+           dm.name as designated_manager_name,
+           dm.phone as designated_manager_phone,
+           bm.name as matched_manager_name,
+           bm.phone as matched_manager_phone
     FROM service_requests sr
     LEFT JOIN users u ON u.id = sr.customer_id
     LEFT JOIN bookings b ON b.request_id = sr.id
+    LEFT JOIN managers dm ON dm.id = sr.designated_manager_id
+    LEFT JOIN managers bm ON bm.id = b.manager_id
     WHERE {$where}
     ORDER BY sr.created_at DESC
     LIMIT {$perPage} OFFSET {$offset}
@@ -121,7 +129,29 @@ ob_start();
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars($req['service_date']) ?> <?= htmlspecialchars(substr($req['start_time'], 0, 5)) ?></td>
                         <td class="px-4 py-3 text-sm text-gray-900"><?= htmlspecialchars(mb_substr($req['address'], 0, 20)) ?>...</td>
                         <td class="px-4 py-3 text-sm">
-                            <?php if (count($apps) > 0): ?>
+                            <?php if ($req['assigned_manager_id']): ?>
+                                <!-- 매칭 완료: bookings의 매니저 표시 -->
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-800 rounded-lg font-medium">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span><?= htmlspecialchars($req['matched_manager_name']) ?></span>
+                                </div>
+                                
+                                <?php if (count($apps) > 0): ?>
+                                    <!-- 지원 내역도 작게 표시 (참고용) -->
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        지원: <?php 
+                                            $appNames = array_map(function($app) {
+                                                return htmlspecialchars($app['manager_name']);
+                                            }, $apps);
+                                            echo implode(', ', $appNames);
+                                        ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                            <?php elseif (count($apps) > 0): ?>
+                                <!-- 매칭 대기: 지원 매니저 표시 -->
                                 <div class="flex flex-wrap gap-1">
                                 <?php foreach ($apps as $app): ?>
                                     <button type="button"

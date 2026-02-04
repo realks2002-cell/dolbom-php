@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $details = trim((string) ($_POST['details'] ?? ''));
     $lat = isset($_POST['lat']) ? (float) $_POST['lat'] : 0.0;
     $lng = isset($_POST['lng']) ? (float) $_POST['lng'] : 0.0;
+    $designatedManagerId = trim((string) ($_POST['designated_manager_id'] ?? ''));
 
     $allowedTypes = ['병원 동행', '가사돌봄', '생활동행', '노인 돌봄', '아이 돌봄', '기타'];
     if (!in_array($serviceType, $allowedTypes, true)) {
@@ -60,8 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = uuid4();
         $pdo = require dirname(__DIR__, 2) . '/database/connect.php';
         // guest 컬럼 포함하여 INSERT (save-temp.php와 일관성 유지)
-        $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, guest_name, guest_phone, guest_address, guest_address_detail, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-        $st->execute([$id, $currentUser['id'], null, null, null, null, $serviceType, $serviceDate, $startTime, $durationMin, $address, $addressDetail === '' ? null : $addressDetail, $phone === '' ? null : $phone, $lat, $lng, $details === '' ? null : $details, 'PENDING', $estimatedPrice]);
+        $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, designated_manager_id, guest_name, guest_phone, guest_address, guest_address_detail, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $st->execute([$id, $currentUser['id'], $designatedManagerId === '' ? null : $designatedManagerId, null, null, null, null, $serviceType, $serviceDate, $startTime, $durationMin, $address, $addressDetail === '' ? null : $addressDetail, $phone === '' ? null : $phone, $lat, $lng, $details === '' ? null : $details, 'PENDING', $estimatedPrice]);
         init_session();
         $_SESSION['request_created'] = $id;
         redirect('/requests/detail?id=' . urlencode($id));
@@ -85,13 +86,13 @@ $minDate = date('Y-m-d');
     <h1 class="text-2xl font-bold">서비스 요청</h1>
     <p class="mt-1 text-gray-600">원하는 서비스와 일시를 선택해주세요.</p>
 
-    <!-- 진행 바 (5단계) -->
-    <div class="mt-6 flex gap-1" role="progressbar" aria-valuenow="<?= $initialStep ?>" aria-valuemin="1" aria-valuemax="5" aria-label="진행 단계">
-        <?php for ($i = 1; $i <= 5; $i++): ?>
+    <!-- 진행 바 (6단계) -->
+    <div class="mt-6 flex gap-1" role="progressbar" aria-valuenow="<?= $initialStep ?>" aria-valuemin="1" aria-valuemax="6" aria-label="진행 단계">
+        <?php for ($i = 1; $i <= 6; $i++): ?>
         <div class="h-1.5 flex-1 rounded-full bg-gray-200 step-dot" data-step="<?= $i ?>"></div>
         <?php endfor; ?>
     </div>
-    <p class="mt-2 text-sm font-medium text-gray-500"><span id="step-label"><?= $initialStep ?></span> / 5</p>
+    <p class="mt-2 text-sm font-medium text-gray-500"><span id="step-label"><?= $initialStep ?></span> / 6</p>
 
     <?php if ($error): ?>
     <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><?= htmlspecialchars($error) ?></div>
@@ -221,6 +222,70 @@ $minDate = date('Y-m-d');
             </div>
         </div>
 
+        <!-- Step 3.5: 도우미 지정 (선택 사항) -->
+        <div class="request-step hidden rounded-lg border bg-white p-6" data-step="3.5" id="step-manager-select">
+            <h2 class="text-lg font-semibold">원하는 도우미가 있으신가요?</h2>
+            <p class="mt-2 text-sm text-gray-600">원하는 도우미가 있으시면 전화번호나 이름으로 검색해주세요. 도우미를 지정하시면 관리자 확인 후 매칭됩니다.</p>
+            
+            <div class="mt-6 space-y-4">
+                <!-- 검색 입력 영역 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="manager_search_phone" class="block text-sm font-medium text-gray-700">전화번호</label>
+                        <input type="tel" id="manager_search_phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="010-1234-5678" pattern="[0-9\-]+">
+                    </div>
+                    <div>
+                        <label for="manager_search_name" class="block text-sm font-medium text-gray-700">이름</label>
+                        <input type="text" id="manager_search_name" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="도우미 이름">
+                    </div>
+                </div>
+                
+                <button type="button" id="btn-search-manager" class="w-full min-h-[44px] rounded-lg bg-primary px-6 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
+                    도우미 찾기
+                </button>
+                
+                <!-- 검색 결과 영역 -->
+                <div id="manager-search-results" class="hidden">
+                    <p class="text-sm font-medium text-gray-700 mb-3">검색 결과</p>
+                    <div id="manager-list" class="space-y-3"></div>
+                </div>
+                
+                <!-- 검색 메시지 -->
+                <p id="manager-search-message" class="text-sm text-gray-500 hidden" role="status" aria-live="polite"></p>
+                
+                <!-- 선택된 도우미 표시 -->
+                <div id="selected-manager-display" class="hidden rounded-lg border-2 border-primary bg-blue-50 p-4">
+                    <div class="flex items-start gap-4">
+                        <img id="selected-manager-photo" src="" alt="" class="w-16 h-16 rounded-full object-cover bg-gray-200" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23999%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E'">
+                        <div class="flex-1">
+                            <p class="font-semibold text-lg" id="selected-manager-name"></p>
+                            <p class="text-sm text-gray-600" id="selected-manager-phone"></p>
+                            <p class="text-sm text-gray-600" id="selected-manager-address"></p>
+                            <p class="text-sm text-primary mt-1" id="selected-manager-specialty"></p>
+                        </div>
+                        <button type="button" id="btn-clear-manager" class="min-h-[44px] min-w-[44px] text-gray-500 hover:text-gray-700" aria-label="선택 취소">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Hidden input for designated_manager_id -->
+                <input type="hidden" id="designated_manager_id" name="designated_manager_id" value="">
+                
+                <!-- 안내 메시지 -->
+                <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                    <p class="text-sm text-blue-800">
+                        <svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                        도우미를 지정하지 않으시면 여러 도우미가 지원할 수 있으며, 더 빠르게 매칭될 수 있습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Step 4: 상세 요청사항 -->
         <div class="request-step hidden rounded-lg border bg-white p-6" data-step="4" id="step-4">
             <h2 class="text-lg font-semibold">추가로 알려주실 사항이 있나요?</h2>
@@ -293,6 +358,8 @@ $minDate = date('Y-m-d');
         steps.forEach(function(el) { el.classList.add('hidden'); });
         var current = form.querySelector('.request-step[data-step="' + s + '"]');
         if (current) current.classList.remove('hidden');
+        
+        // 진행 바 업데이트 (6단계로 매핑)
         dots.forEach(function(d) {
             var dStep = parseInt(d.dataset.step, 10);
             d.classList.remove('bg-primary');
@@ -303,11 +370,24 @@ $minDate = date('Y-m-d');
                     d.classList.remove('bg-gray-200');
                     d.classList.add('bg-primary');
                 }
-            } else if (dStep <= s) {
-                d.classList.remove('bg-gray-200');
-                d.classList.add('bg-primary');
+            } else if (s === 3.5) {
+                // Step 3.5는 3번까지 활성화
+                if (dStep <= 3) {
+                    d.classList.remove('bg-gray-200');
+                    d.classList.add('bg-primary');
+                }
+            } else {
+                // 일반 단계 (1,2,3,4,5)는 해당 단계까지 활성화
+                var mappedStep = s;
+                if (s === 4) mappedStep = 4; // Step 4는 dot 4
+                if (s === 5) mappedStep = 6; // Step 5(결제)는 dot 6
+                if (dStep <= mappedStep) {
+                    d.classList.remove('bg-gray-200');
+                    d.classList.add('bg-primary');
+                }
             }
         });
+        
         // Step 1.5가 표시될 때 주소 검색 버튼 상태 업데이트
         if (s === 1.5 && typeof updateGuestAddrBtn === 'function') {
             setTimeout(updateGuestAddrBtn, 100);
@@ -400,6 +480,11 @@ $minDate = date('Y-m-d');
                 if (firstDuration) firstDuration.focus();
                 return false;
             }
+            return true;
+        }
+        
+        // Step 3.5: 도우미 지정 (선택사항이므로 항상 통과)
+        if (s === 3.5) {
             return true;
         }
         
@@ -553,7 +638,7 @@ $minDate = date('Y-m-d');
             btnAddr.disabled = true;
             btnAddr.textContent = '검색 중…';
             
-            var url = apiBase + '/api/address-suggest?keyword=' + encodeURIComponent(addr);
+            var url = apiBase + '/api/address-suggest.php?keyword=' + encodeURIComponent(addr);
             fetch(url).then(function(r) { return r.json(); }).then(function(res) {
                 if (res.success && res.items && res.items.length > 0) {
                     if (res.items.length === 1) {
@@ -603,6 +688,10 @@ $minDate = date('Y-m-d');
         
         if (step() === 1.5) {
             setStep(1);
+        } else if (step() === 3.5) {
+            setStep(3);
+        } else if (step() === 4) {
+            setStep(3.5);
         } else if (step() > 1) {
             setStep(step() - 1);
         }
@@ -639,6 +728,18 @@ $minDate = date('Y-m-d');
             return;
         }
         
+        // Step 3: 일시 선택 완료 시 Step 3.5(도우미 지정)로 이동
+        if (step() === 3) {
+            setStep(3.5);
+            return;
+        }
+        
+        // Step 3.5: 도우미 지정 완료 시 Step 4로 이동
+        if (step() === 3.5) {
+            setStep(4);
+            return;
+        }
+        
         if (step() < 5) {
             var nextStep = step() + 1;
             
@@ -671,10 +772,10 @@ $minDate = date('Y-m-d');
         var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
         
         // Step 1부터 5까지 검증 (로그인한 회원은 Step 1 건너뛰기)
-        var stepsToValidate = [1, 1.5, 2, 3, 4, 5];
+        var stepsToValidate = [1, 1.5, 2, 3, 3.5, 4, 5];
         if (isLoggedIn) {
             // 로그인한 회원은 Step 1 제외
-            stepsToValidate = [1.5, 2, 3, 4, 5];
+            stepsToValidate = [1.5, 2, 3, 3.5, 4, 5];
         }
         
         for (var i = 0; i < stepsToValidate.length; i++) {
@@ -902,6 +1003,7 @@ $minDate = date('Y-m-d');
                     lat: lat,
                     lng: lng,
                     details: formData.get('details') || '',
+                    designated_manager_id: formData.get('designated_manager_id') || '', // 지정 도우미 ID
                     // 비회원 정보
                     guest_name: guestName,
                     guest_phone: guestPhone,
@@ -910,9 +1012,10 @@ $minDate = date('Y-m-d');
                 };
                 
                 console.log('서비스 요청 데이터:', serviceData);
+                console.log('지정 도우미 ID:', serviceData.designated_manager_id || '(없음)');
                 
                 // 서비스 요청을 먼저 DB에 저장 (AJAX)
-                var saveUrl = apiBase + '/api/requests/save-temp';
+                var saveUrl = apiBase + '/api/requests/save-temp.php';
                 console.log('API 호출 URL:', saveUrl);
                 
                 var saveResponse = await fetch(saveUrl, {
@@ -1139,7 +1242,7 @@ $minDate = date('Y-m-d');
             btnGuestAddr.disabled = true;
             btnGuestAddr.textContent = '검색 중…';
             
-            var url = apiBase + '/api/address-suggest?keyword=' + encodeURIComponent(addr) + '&debug=1';
+            var url = apiBase + '/api/address-suggest.php?keyword=' + encodeURIComponent(addr) + '&debug=1';
             console.log('API 호출:', url);
             
             fetch(url)
@@ -1200,6 +1303,193 @@ $minDate = date('Y-m-d');
         });
     }
 
+    // ==========================================
+    // Step 3.5: 도우미 검색 기능
+    // ==========================================
+    var btnSearchManager = document.getElementById('btn-search-manager');
+    var managerSearchPhone = document.getElementById('manager_search_phone');
+    var managerSearchName = document.getElementById('manager_search_name');
+    var managerSearchResults = document.getElementById('manager-search-results');
+    var managerList = document.getElementById('manager-list');
+    var managerSearchMessage = document.getElementById('manager-search-message');
+    var selectedManagerDisplay = document.getElementById('selected-manager-display');
+    var designatedManagerIdInput = document.getElementById('designated_manager_id');
+    var btnClearManager = document.getElementById('btn-clear-manager');
+    
+    var selectedManager = null;
+    
+    // 도우미 검색
+    if (btnSearchManager) {
+        btnSearchManager.addEventListener('click', function() {
+            var phone = managerSearchPhone ? managerSearchPhone.value.trim() : '';
+            var name = managerSearchName ? managerSearchName.value.trim() : '';
+            
+            // 최소 하나는 입력되어야 함
+            if (!phone && !name) {
+                alert('전화번호 또는 이름을 입력해주세요.');
+                return;
+            }
+            
+            // 검색 중 표시
+            btnSearchManager.disabled = true;
+            btnSearchManager.textContent = '검색 중...';
+            managerSearchMessage.textContent = '';
+            managerSearchMessage.classList.add('hidden');
+            managerSearchResults.classList.add('hidden');
+            managerList.innerHTML = '';
+            
+            // API 호출 (apiBase는 슬래시 없이 끝남)
+            // 캐시 방지를 위한 타임스탬프 추가
+            var apiUrl = apiBase + '/api/managers/search.php?t=' + Date.now();
+            console.log('🔍 API 호출:', apiUrl);
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
+                },
+                body: JSON.stringify({ phone: phone, name: name })
+            })
+            .then(function(r) { 
+                console.log('✅ API 응답 상태:', r.status, r.statusText, r.url);
+                // 응답이 JSON이 아닌 경우 에러 로깅
+                if (!r.ok) {
+                    console.error('❌ API 응답 에러:', r.status, r.statusText, 'URL:', r.url);
+                }
+                return r.text();
+            })
+            .then(function(text) {
+                console.log('📄 응답 내용 (처음 500자):', text.substring(0, 500));
+                try {
+                    var json = JSON.parse(text);
+                    console.log('✅ JSON 파싱 성공:', json);
+                    return json;
+                } catch(e) {
+                    console.error('❌ JSON 파싱 실패:', e.message);
+                    console.error('📄 전체 응답:', text);
+                    throw new Error('서버 응답이 올바르지 않습니다.');
+                }
+            })
+            .then(function(res) {
+                if (res.ok && res.managers && res.managers.length > 0) {
+                    // 검색 결과 표시
+                    managerSearchResults.classList.remove('hidden');
+                    managerList.innerHTML = '';
+                    
+                    res.managers.forEach(function(manager) {
+                        var card = document.createElement('div');
+                        card.className = 'flex items-start gap-4 rounded-lg border border-gray-200 bg-white p-4 cursor-pointer hover:border-primary hover:bg-blue-50 transition-colors';
+                        
+                        var defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23999%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E';
+                        var photoSrc = manager.photo || defaultAvatar;
+                        
+                        card.innerHTML = 
+                            '<img src="' + photoSrc + '" alt="' + manager.name + '" class="w-16 h-16 rounded-full object-cover bg-gray-200" onerror="this.src=\'' + defaultAvatar + '\'">' +
+                            '<div class="flex-1">' +
+                                '<p class="font-semibold text-lg">' + manager.name + '</p>' +
+                                '<p class="text-sm text-gray-600">' + (manager.phone || '') + '</p>' +
+                                '<p class="text-sm text-gray-600">' + (manager.address1 || '') + '</p>' +
+                                '<p class="text-sm text-primary mt-1">' + (manager.specialty || '') + '</p>' +
+                            '</div>' +
+                            '<button type="button" class="min-h-[44px] rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90">선택</button>';
+                        
+                        var selectBtn = card.querySelector('button');
+                        selectBtn.addEventListener('click', function() {
+                            selectManager(manager);
+                        });
+                        
+                        card.addEventListener('click', function(e) {
+                            if (e.target.tagName !== 'BUTTON') {
+                                selectManager(manager);
+                            }
+                        });
+                        
+                        managerList.appendChild(card);
+                    });
+                    
+                    managerSearchMessage.textContent = res.count + '명의 도우미를 찾았습니다.';
+                    managerSearchMessage.classList.remove('hidden', 'text-red-600');
+                    managerSearchMessage.classList.add('text-gray-600');
+                } else {
+                    managerSearchMessage.textContent = '검색 결과가 없습니다. 전화번호나 이름을 다시 확인해주세요.';
+                    managerSearchMessage.classList.remove('hidden', 'text-gray-600');
+                    managerSearchMessage.classList.add('text-red-600');
+                }
+            })
+            .catch(function(err) {
+                console.error('도우미 검색 오류:', err);
+                managerSearchMessage.textContent = '검색 중 오류가 발생했습니다.';
+                managerSearchMessage.classList.remove('hidden', 'text-gray-600');
+                managerSearchMessage.classList.add('text-red-600');
+            })
+            .finally(function() {
+                btnSearchManager.disabled = false;
+                btnSearchManager.textContent = '도우미 찾기';
+            });
+        });
+    }
+    
+    // 도우미 선택
+    function selectManager(manager) {
+        selectedManager = manager;
+        
+        // Hidden input에 ID 저장
+        if (designatedManagerIdInput) {
+            designatedManagerIdInput.value = manager.id;
+        }
+        
+        // 선택된 도우미 정보 표시
+        if (selectedManagerDisplay) {
+            selectedManagerDisplay.classList.remove('hidden');
+            
+            var photoEl = document.getElementById('selected-manager-photo');
+            var nameEl = document.getElementById('selected-manager-name');
+            var phoneEl = document.getElementById('selected-manager-phone');
+            var addressEl = document.getElementById('selected-manager-address');
+            var specialtyEl = document.getElementById('selected-manager-specialty');
+            
+            var defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23999%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E';
+            if (photoEl) photoEl.src = manager.photo || defaultAvatar;
+            if (nameEl) nameEl.textContent = manager.name;
+            if (phoneEl) phoneEl.textContent = manager.phone || '';
+            if (addressEl) addressEl.textContent = manager.address1 || '';
+            if (specialtyEl) specialtyEl.textContent = manager.specialty || '';
+        }
+        
+        // 검색 결과 숨기기
+        if (managerSearchResults) {
+            managerSearchResults.classList.add('hidden');
+        }
+        
+        // 검색 메시지 업데이트
+        if (managerSearchMessage) {
+            managerSearchMessage.textContent = '도우미가 선택되었습니다.';
+            managerSearchMessage.classList.remove('hidden', 'text-red-600', 'text-gray-600');
+            managerSearchMessage.classList.add('text-green-600');
+        }
+    }
+    
+    // 도우미 선택 취소
+    if (btnClearManager) {
+        btnClearManager.addEventListener('click', function() {
+            selectedManager = null;
+            
+            if (designatedManagerIdInput) {
+                designatedManagerIdInput.value = '';
+            }
+            
+            if (selectedManagerDisplay) {
+                selectedManagerDisplay.classList.add('hidden');
+            }
+            
+            if (managerSearchMessage) {
+                managerSearchMessage.textContent = '';
+                managerSearchMessage.classList.add('hidden');
+                managerSearchMessage.classList.remove('text-green-600', 'text-red-600', 'text-gray-600');
+            }
+        });
+    }
 
 })();
 </script>

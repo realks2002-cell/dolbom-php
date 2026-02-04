@@ -11,8 +11,15 @@
     # URL 리라이팅
     # manager-app 폴더는 제외 (Vue.js 앱이 자체 라우팅 처리)
     RewriteCond %{REQUEST_URI} !^/manager-app/
+    
+    # API 폴더는 제외 (직접 파일 실행) - .php 확장자 있든 없든
+    RewriteCond %{REQUEST_URI} !^/api/
+    
+    # 실제 파일이나 디렉토리가 존재하면 그대로 실행
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # 그 외의 요청은 index.php로 라우팅
     RewriteRule ^(.*)$ index.php?route=$1 [L,QSA]
 </IfModule>
 

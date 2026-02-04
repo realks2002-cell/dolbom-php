@@ -26,6 +26,10 @@ $currentUser = $currentUser ?? null;
     <meta name="description" content="믿을 수 있는 병원동행과 돌봄 서비스 - <?= htmlspecialchars(APP_NAME) ?>">
     <title><?= htmlspecialchars($pageTitle) ?></title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="<?= $base ?>/favicon.svg">
+    <link rel="alternate icon" href="<?= $base ?>/favicon.ico">
+    
     <!-- Fonts - Pretendard -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     

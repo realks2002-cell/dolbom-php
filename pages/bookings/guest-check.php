@@ -396,26 +396,62 @@ ob_start();
     </div>
     
     <?php if (in_array($booking['status'], ['CONFIRMED', 'MATCHING']) && $booking['payment_status'] === 'SUCCESS'): ?>
+    <!-- 취소 확인 모달 -->
+    <div id="cancelModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-bold">예약 취소 확인</h2>
+            </div>
+            <div class="px-6 py-6">
+                <p class="text-gray-700 mb-4">
+                    예약을 취소하시겠습니까?
+                </p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-blue-800">
+                        <strong>안내:</strong> 관리자 확인 후 환불이 진행됩니다.
+                    </p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex gap-3">
+                <button type="button" 
+                        onclick="closeCancelModal()" 
+                        class="flex-1 min-h-[44px] px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
+                    취소
+                </button>
+                <button type="button" 
+                        onclick="confirmCancel()" 
+                        class="flex-1 min-h-[44px] px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                    예약 취소
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <script>
     function cancelBooking() {
-        if (!confirm('예약을 취소하시겠습니까?\n결제 금액은 환불 처리됩니다.')) {
-            return;
-        }
-        
+        document.getElementById('cancelModal').classList.remove('hidden');
+    }
+    
+    function closeCancelModal() {
+        document.getElementById('cancelModal').classList.add('hidden');
+    }
+    
+    function confirmCancel() {
         // 비회원 취소 API 호출
         fetch('<?= $base ?>/api/bookings/cancel-guest', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 request_id: '<?= htmlspecialchars($booking['id']) ?>',
-                guest_phone: '<?= htmlspecialchars($booking['guest_phone']) ?>'
+                guest_phone: '<?= htmlspecialchars($booking['guest_phone'] ?: $booking['phone']) ?>'
             })
         })
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                alert('예약이 취소되었습니다.\n환불은 1-3 영업일 내 처리됩니다.');
-                location.reload();
+                closeCancelModal();
+                // 성공 메시지 모달 표시
+                showSuccessModal();
             } else {
                 alert('취소 실패: ' + (data.error || '알 수 없는 오류'));
             }
@@ -425,6 +461,38 @@ ob_start();
             alert('취소 처리 중 오류가 발생했습니다.');
         });
     }
+    
+    function showSuccessModal() {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-bold">예약 취소 완료</h2>
+                </div>
+                <div class="px-6 py-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-800">
+                            <strong>관리자 확인 후 환불이 진행됩니다.</strong>
+                        </p>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200">
+                    <button type="button" 
+                            onclick="this.closest('.fixed').remove(); location.reload();" 
+                            class="w-full min-h-[44px] px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 font-medium">
+                        확인
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // 모달 외부 클릭 시 닫기
+    document.getElementById('cancelModal').addEventListener('click', function(e) {
+        if (e.target === this) closeCancelModal();
+    });
     </script>
     <?php endif; ?>
     

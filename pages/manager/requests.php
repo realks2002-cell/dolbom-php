@@ -19,11 +19,13 @@ $pdo = require dirname(__DIR__, 2) . '/database/connect.php';
 $managerId = $_SESSION['manager_id'];
 
 // 진행중인 서비스 요청 조회 (PENDING, MATCHING 상태)
+// 지정 도우미가 있는 요청은 제외 (designated_manager_id IS NULL)
 $stmt = $pdo->prepare("
     SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name, COALESCE(u.phone, sr.guest_phone, '') as customer_phone
     FROM service_requests sr
     LEFT JOIN users u ON u.id = sr.customer_id
     WHERE sr.status IN ('PENDING', 'MATCHING')
+    AND sr.designated_manager_id IS NULL
     ORDER BY sr.service_date ASC, sr.start_time ASC
     LIMIT 50
 ");

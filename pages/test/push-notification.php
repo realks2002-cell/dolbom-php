@@ -131,7 +131,7 @@
             }
             
             try {
-                const response = await fetch('/api/test/register-token-by-phone', {
+                const response = await fetch('/api/test/register-token-by-phone.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -194,7 +194,7 @@
             }
             
             try {
-                const response = await fetch('/api/test/register-token-by-phone', {
+                const response = await fetch('/api/test/register-token-by-phone.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -254,7 +254,7 @@
             }
             
             try {
-                const response = await fetch('/api/test/send-push-to-all', {
+                const response = await fetch('/api/test/send-push-to-all.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -298,7 +298,7 @@
             }
             
             try {
-                const response = await fetch('/api/test/send-push', {
+                const response = await fetch('/api/test/send-push.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

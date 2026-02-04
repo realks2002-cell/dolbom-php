@@ -317,7 +317,7 @@ function closeRefundModal() {
 }
 
 async function processRefund() {
-    if (!currentPaymentId || !currentPaymentKey) return;
+    if (!currentPaymentId) return;
     
     var reason = document.getElementById('refund-reason').value.trim();
     if (!reason) {
@@ -330,14 +330,13 @@ async function processRefund() {
     }
     
     try {
-        var response = await fetch(apiBase + '/api/admin/process-refund', {
+        var response = await fetch(apiBase + '/api/payments/refund.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 payment_id: currentPaymentId,
-                payment_key: currentPaymentKey,
-                amount: currentAmount,
-                reason: reason
+                refund_amount: parseInt(currentAmount),
+                refund_reason: reason
             })
         });
         

@@ -50,7 +50,8 @@ $st = $pdo->prepare("
         b.manager_id,
         b.final_price,
         b.payment_status,
-        m.name as manager_name,
+        mg.name as manager_name,
+        mg.phone as manager_phone,
         p.status as payment_status_detail,
         p.paid_at,
         CASE 
@@ -59,7 +60,7 @@ $st = $pdo->prepare("
         END as has_applications
     FROM service_requests sr
     LEFT JOIN bookings b ON b.request_id = sr.id
-    LEFT JOIN users m ON m.id = b.manager_id
+    LEFT JOIN managers mg ON mg.id = b.manager_id
     LEFT JOIN payments p ON p.service_request_id = sr.id
     WHERE sr.customer_id = ? 
     AND sr.status IN ($placeholders)
@@ -147,9 +148,17 @@ ob_start();
                         </div>
                         
                         <?php if ($booking['manager_name']): ?>
-                        <p class="mt-3 text-sm text-gray-700">
-                            <span class="font-medium">매니저:</span> <?= htmlspecialchars($booking['manager_name']) ?>
-                        </p>
+                        <div class="mt-3 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                            <p class="text-sm font-semibold text-blue-900">✓ 매칭 확인</p>
+                            <p class="mt-1 text-sm text-blue-800">
+                                <span class="font-medium">담당 도우미:</span> <?= htmlspecialchars($booking['manager_name']) ?>
+                            </p>
+                            <?php if ($booking['manager_phone']): ?>
+                            <p class="mt-0.5 text-sm text-blue-800">
+                                <span class="font-medium">연락처:</span> <?= htmlspecialchars($booking['manager_phone']) ?>
+                            </p>
+                            <?php endif; ?>
+                        </div>
                         <?php endif; ?>
                         
                         <div class="mt-3 flex flex-wrap gap-4 text-sm">
@@ -209,7 +218,7 @@ ob_start();
             this.textContent = '처리 중...';
             
             try {
-                var response = await fetch(apiBase + '/api/bookings/cancel', {
+                var response = await fetch(apiBase + '/api/bookings/cancel.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ request_id: requestId })

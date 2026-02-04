@@ -27,6 +27,8 @@ $map = [
     'api/test/send-push-to-all' => 'api/test/send-push-to-all.php',
     'api/test/register-token-by-phone' => 'api/test/register-token-by-phone.php',
     'test/push-notification' => 'pages/test/push-notification.php',
+    'version-check' => 'version-check.php',
+    'admin-update-designated' => 'admin-update-designated.php',
     'database/export' => 'database/export.php',
     'database/download' => 'database/download.php',
     'index' => 'pages/index.php',
@@ -60,10 +62,12 @@ $map = [
     'admin/users' => 'pages/admin/users.php',
     'admin/managers' => 'pages/admin/managers.php',
     'admin/requests' => 'pages/admin/requests.php',
+    'admin/designated-matching' => 'pages/admin/designated-matching.php',
     'admin/payments' => 'pages/admin/payments.php',
     'admin/refunds' => 'pages/admin/refunds.php',
     'admin/refund-info' => 'pages/admin/refund-info.php',
     'admin/revenue' => 'pages/admin/revenue.php',
+    'admin/settings' => 'pages/admin/settings.php',
 ];
 
 $file = $map[$route] ?? null;

@@ -1,0 +1,12 @@
+# API 폴더 - 직접 PHP 파일 실행
+# URL 리라이팅 비활성화
+
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>
+
+# PHP 파일 직접 실행 허용
+<FilesMatch "\.php$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
