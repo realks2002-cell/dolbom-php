@@ -28,12 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $currentUser) {
     redirect($currentUser['role'] === ROLE_MANAGER ? '/manager/requests' : '/');
 }
 
-/**
- * 전화번호 정규화 (하이픈 제거)
- */
-function normalize_phone($phone) {
-    return preg_replace('/[^0-9]/', '', $phone);
-}
+// normalize_phone() 함수는 includes/security.php에 정의되어 있음
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // CSRF 토큰 검증

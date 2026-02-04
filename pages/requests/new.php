@@ -19,9 +19,9 @@ if ($userType === 'member' && !$currentUser) {
     }
 }
 
-// 로그인한 사용자는 Step 1부터 시작 (회원/비회원 구분)
-$initialStep = 1;
-// 회원도 Step 1.5를 거치도록 함
+// 로그인한 회원은 Step 1.5로 바로 시작 (회원/비회원 구분 건너뛰기)
+// 비회원은 Step 1부터 시작
+$initialStep = ($currentUser && $currentUser['role'] === ROLE_CUSTOMER) ? 1.5 : 1;
 
 $error = '';
 $RATE_PER_HOUR = 20000;
@@ -59,8 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $estimatedPrice = $duration * $RATE_PER_HOUR;
         $id = uuid4();
         $pdo = require dirname(__DIR__, 2) . '/database/connect.php';
-        $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-        $st->execute([$id, $currentUser['id'], $serviceType, $serviceDate, $startTime, $durationMin, $address, $addressDetail === '' ? null : $addressDetail, $phone === '' ? null : $phone, $lat, $lng, $details === '' ? null : $details, 'PENDING', $estimatedPrice]);
+        // guest 컬럼 포함하여 INSERT (save-temp.php와 일관성 유지)
+        $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, guest_name, guest_phone, guest_address, guest_address_detail, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $st->execute([$id, $currentUser['id'], null, null, null, null, $serviceType, $serviceDate, $startTime, $durationMin, $address, $addressDetail === '' ? null : $addressDetail, $phone === '' ? null : $phone, $lat, $lng, $details === '' ? null : $details, 'PENDING', $estimatedPrice]);
         init_session();
         $_SESSION['request_created'] = $id;
         redirect('/requests/detail?id=' . urlencode($id));
@@ -97,7 +98,12 @@ $minDate = date('Y-m-d');
     <?php endif; ?>
 
     <form id="request-form" class="mt-6" action="<?= $base ?>/requests/new" method="post" novalidate>
-        <!-- Step 1: 회원/비회원 구분 -->
+        <!-- 로그인한 회원인 경우 user_type을 member로 자동 설정 (숨김) -->
+        <?php if ($currentUser && $currentUser['role'] === ROLE_CUSTOMER): ?>
+        <input type="hidden" name="user_type" value="member">
+        <?php endif; ?>
+        
+        <!-- Step 1: 회원/비회원 구분 (로그인한 회원은 건너뜀) -->
         <div class="request-step <?= $initialStep === 1 ? '' : 'hidden' ?> rounded-lg border bg-white p-6" data-step="1" id="step-1">
             <h2 class="text-lg font-semibold">회원이신가요?</h2>
             <p class="mt-2 text-sm text-gray-600">서비스 신청을 위해 회원 여부를 선택해주세요.</p>
@@ -120,23 +126,23 @@ $minDate = date('Y-m-d');
         </div>
 
         <!-- Step 1.5: 신청자 정보 입력 (회원/비회원 공통) -->
-        <div class="request-step hidden rounded-lg border bg-white p-6" data-step="1.5" id="step-guest-info">
+        <div class="request-step <?= $initialStep === 1.5 ? '' : 'hidden' ?> rounded-lg border bg-white p-6" data-step="1.5" id="step-guest-info">
             <h2 class="text-lg font-semibold">신청자 정보를 입력해주세요</h2>
             <p class="mt-2 text-sm text-gray-600">서비스 신청을 위해 연락받으실 정보를 입력해주세요.</p>
             <div class="mt-6 space-y-4">
                 <div>
                     <label for="guest_name" class="block text-sm font-medium text-gray-700">이름</label>
-                    <input type="text" id="guest_name" name="guest_name" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="이름을 입력하세요" value="<?= $currentUser && isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : '' ?>" required>
+                    <input type="text" id="guest_name" name="guest_name" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="이름을 입력하세요" value="<?= $currentUser && isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : '' ?>" <?= ($currentUser && $currentUser['role'] === ROLE_CUSTOMER) ? '' : 'required' ?>>
                 </div>
                 <div>
                     <label for="guest_phone" class="block text-sm font-medium text-gray-700">전화번호</label>
-                    <input type="tel" id="guest_phone" name="guest_phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="010-1234-5678" pattern="[0-9\-]+" value="<?= $currentUser && isset($currentUser['phone']) ? htmlspecialchars($currentUser['phone']) : '' ?>" required>
+                    <input type="tel" id="guest_phone" name="guest_phone" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="010-1234-5678" pattern="[0-9\-]+" value="<?= $currentUser && isset($currentUser['phone']) ? htmlspecialchars($currentUser['phone']) : '' ?>" <?= ($currentUser && $currentUser['role'] === ROLE_CUSTOMER) ? '' : 'required' ?>>
                 </div>
               
                 <div>
     <label for="guest_address" class="block text-sm font-medium text-gray-700">방문주소</label>
     <div class="mt-1 flex gap-2">
-        <input type="text" id="guest_address" name="guest_address" class="block flex-1 rounded-lg border border-gray-300 px-4 py-3" placeholder="도로명 또는 지번 주소 입력 후 검색" value="<?= $currentUser && isset($currentUser['address']) ? htmlspecialchars($currentUser['address']) : '' ?>" required autocomplete="off" aria-describedby="guest-address-search-msg">
+        <input type="text" id="guest_address" name="guest_address" class="block flex-1 rounded-lg border border-gray-300 px-4 py-3" placeholder="도로명 또는 지번 주소 입력 후 검색" value="<?= $currentUser && isset($currentUser['address']) ? htmlspecialchars($currentUser['address']) : '' ?>" <?= ($currentUser && $currentUser['role'] === ROLE_CUSTOMER) ? '' : 'required' ?> autocomplete="off" aria-describedby="guest-address-search-msg">
         <button type="button" id="btn-guest-address-search" class="shrink-0 min-h-[44px] min-w-[44px] rounded-lg bg-primary px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>주소 검색</button>
     </div>
     <p id="guest-address-search-msg" class="mt-1 text-sm" role="status" aria-live="polite"></p>
@@ -291,7 +297,13 @@ $minDate = date('Y-m-d');
             var dStep = parseInt(d.dataset.step, 10);
             d.classList.remove('bg-primary');
             d.classList.add('bg-gray-200');
-            if (dStep <= s) {
+            // Step 1.5일 때는 1번 dot만 활성화
+            if (s === 1.5) {
+                if (dStep === 1) {
+                    d.classList.remove('bg-gray-200');
+                    d.classList.add('bg-primary');
+                }
+            } else if (dStep <= s) {
                 d.classList.remove('bg-gray-200');
                 d.classList.add('bg-primary');
             }
@@ -301,7 +313,15 @@ $minDate = date('Y-m-d');
             setTimeout(updateGuestAddrBtn, 100);
         }
         stepLabel.textContent = s;
-        btnPrev.classList.toggle('hidden', s === 1);
+        
+        // 이전 버튼 표시 로직: 로그인한 회원은 Step 1.5가 첫 단계이므로 이전 버튼 숨김
+        var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
+        if (isLoggedIn && s === 1.5) {
+            btnPrev.classList.add('hidden'); // 로그인한 회원은 Step 1.5에서 이전 버튼 숨김
+        } else {
+            btnPrev.classList.toggle('hidden', s === 1); // 비회원은 Step 1에서 이전 버튼 숨김
+        }
+        
         btnNext.classList.toggle('hidden', s === 5);
         btnPayment.classList.toggle('hidden', s !== 5);
         
@@ -327,8 +347,16 @@ $minDate = date('Y-m-d');
             return true;
         }
 
-        // Step 1.5: 비회원 정보 확인
+        // Step 1.5: 비회원 정보 확인 (로그인한 회원은 검증 건너뛰기)
         if (s === 1.5) {
+            var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
+            
+            // 로그인한 회원은 비회원 정보 검증 불필요
+            if (isLoggedIn) {
+                return true;
+            }
+            
+            // 비회원인 경우에만 비회원 정보 검증
             var gName = form.querySelector('#guest_name');
             var gPhone = form.querySelector('#guest_phone');
             var gAddr = form.querySelector('#guest_address');
@@ -565,6 +593,14 @@ $minDate = date('Y-m-d');
     }
 
     btnPrev.addEventListener('click', function() {
+        var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
+        
+        // 로그인한 회원은 Step 1.5에서 이전 버튼 클릭 시 Step 1로 가지 않음 (Step 1 건너뛰었으므로)
+        if (step() === 1.5 && isLoggedIn) {
+            // 로그인한 회원은 Step 1.5가 첫 단계이므로 이전 버튼 동작 없음
+            return;
+        }
+        
         if (step() === 1.5) {
             setStep(1);
         } else if (step() > 1) {
@@ -632,7 +668,17 @@ $minDate = date('Y-m-d');
     });
 
     form.addEventListener('submit', function(e) {
-        for (var s = 1; s <= 5; s++) {
+        var isLoggedIn = <?= $currentUser && $currentUser['role'] === ROLE_CUSTOMER ? 'true' : 'false' ?>;
+        
+        // Step 1부터 5까지 검증 (로그인한 회원은 Step 1 건너뛰기)
+        var stepsToValidate = [1, 1.5, 2, 3, 4, 5];
+        if (isLoggedIn) {
+            // 로그인한 회원은 Step 1 제외
+            stepsToValidate = [1.5, 2, 3, 4, 5];
+        }
+        
+        for (var i = 0; i < stepsToValidate.length; i++) {
+            var s = stepsToValidate[i];
             var el = form.querySelector('.request-step[data-step="' + s + '"]');
             if (!el) continue;
             var inputs = el.querySelectorAll('[required]');

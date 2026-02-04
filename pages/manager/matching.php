@@ -31,11 +31,11 @@ $totalPages = ceil($totalCount / $perPage);
 
 // 매칭현황 (내가 지원한 요청들)
 $matchingStmt = $pdo->prepare("
-    SELECT sr.*, u.name as customer_name, u.phone as customer_phone,
+    SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name, COALESCE(u.phone, sr.guest_phone, '') as customer_phone,
            a.id as application_id, a.status as app_status, a.message as app_message, a.created_at as applied_at
     FROM applications a
     JOIN service_requests sr ON sr.id = a.request_id
-    JOIN users u ON u.id = sr.customer_id
+    LEFT JOIN users u ON u.id = sr.customer_id
     WHERE a.manager_id = ?
     ORDER BY a.created_at DESC
     LIMIT :limit OFFSET :offset

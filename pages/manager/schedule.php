@@ -21,10 +21,10 @@ $managerId = $_SESSION['manager_id'];
 // 완료된 서비스 조회 (bookings 테이블에서)
 $stmt = $pdo->prepare("
     SELECT b.*, sr.service_type, sr.service_date, sr.start_time, sr.duration_minutes,
-           sr.address, u.name as customer_name
+           sr.address, COALESCE(u.name, sr.guest_name, '비회원') as customer_name
     FROM bookings b
     JOIN service_requests sr ON sr.id = b.request_id
-    JOIN users u ON u.id = sr.customer_id
+    LEFT JOIN users u ON u.id = sr.customer_id
     WHERE b.manager_id = ?
     ORDER BY sr.service_date DESC, sr.start_time DESC
     LIMIT 50

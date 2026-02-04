@@ -33,9 +33,9 @@ $totalPages = ceil($total / $perPage);
 
 // 서비스 요청 조회 (매니저 정보 포함)
 $stmt = $pdo->prepare("
-    SELECT sr.*, u.name as customer_name, b.manager_id as assigned_manager_id
+    SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name, b.manager_id as assigned_manager_id
     FROM service_requests sr
-    JOIN users u ON u.id = sr.customer_id
+    LEFT JOIN users u ON u.id = sr.customer_id
     LEFT JOIN bookings b ON b.request_id = sr.id
     WHERE {$where}
     ORDER BY sr.created_at DESC

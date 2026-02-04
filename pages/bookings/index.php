@@ -65,6 +65,7 @@ $st = $pdo->prepare("
     AND sr.status IN ($placeholders)
     ORDER BY sr.service_date DESC, sr.start_time DESC
 ");
+// 회원 전용: customer_id로 조회 (비회원은 pages/bookings/guest-check.php 사용)
 $params = array_merge([$currentUser['id']], $statuses);
 $st->execute($params);
 $bookings = $st->fetchAll();

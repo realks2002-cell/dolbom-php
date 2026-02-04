@@ -39,7 +39,7 @@ try {
     $pdo->beginTransaction();
     
     // 서비스 요청 확인
-    $st = $pdo->prepare('SELECT id, customer_id, status, estimated_price FROM service_requests WHERE id = ?');
+    $st = $pdo->prepare('SELECT id, customer_id, guest_phone, status, estimated_price FROM service_requests WHERE id = ?');
     $st->execute([$requestId]);
     $request = $st->fetch();
     
@@ -49,6 +49,17 @@ try {
         exit;
     }
     
+    // 권한 체크: 회원은 customer_id로, 비회원은 guest_phone으로 확인
+    // 현재는 회원 전용 API이지만, 비회원 케이스도 체크
+    $isGuest = ($request['customer_id'] === null);
+    if ($isGuest) {
+        // 비회원인 경우 이 API 사용 불가 (비회원은 cancel-guest.php 사용)
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => '비회원 예약은 비회원 취소 페이지를 사용해주세요.']);
+        exit;
+    }
+    
+    // 회원 권한 체크
     if ($request['customer_id'] !== $currentUser['id']) {
         http_response_code(403);
         echo json_encode(['ok' => false, 'error' => '권한이 없습니다.']);

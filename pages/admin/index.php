@@ -51,9 +51,9 @@ ob_start();
         <h2 class="text-lg font-semibold mb-4">최근 서비스 요청</h2>
         <?php
         $recentRequests = $pdo->query("
-            SELECT sr.*, u.name as customer_name
+            SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name
             FROM service_requests sr
-            JOIN users u ON u.id = sr.customer_id
+            LEFT JOIN users u ON u.id = sr.customer_id
             ORDER BY sr.created_at DESC
             LIMIT 10
         ")->fetchAll();

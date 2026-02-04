@@ -20,11 +20,11 @@ $managerId = $_SESSION['manager_id'];
 
 // 정산 내역 조회 (settlements 테이블)
 $stmt = $pdo->prepare("
-    SELECT s.*, sr.service_type, sr.service_date, u.name as customer_name
+    SELECT s.*, sr.service_type, sr.service_date, COALESCE(u.name, sr.guest_name, '비회원') as customer_name
     FROM settlements s
     JOIN bookings b ON b.id = s.booking_id
     JOIN service_requests sr ON sr.id = b.request_id
-    JOIN users u ON u.id = sr.customer_id
+    LEFT JOIN users u ON u.id = sr.customer_id
     WHERE s.manager_id = ?
     ORDER BY s.created_at DESC
     LIMIT 50

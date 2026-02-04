@@ -119,13 +119,14 @@ try {
     error_log('save-temp.php: customerId=' . ($customerId ?? 'NULL') . ', currentUser=' . ($currentUser ? '있음' : '없음') . ', guestName=' . ($guestName ?: '없음'));
     
     // guest 컬럼 포함하여 Insert
-    $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, guest_name, guest_phone, guest_address, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, guest_name, guest_phone, guest_address, guest_address_detail, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
     $st->execute([
         $requestId,
         $customerId, // 회원인 경우 반드시 값이 있어야 함
         $guestName === '' ? null : $guestName,
         $guestPhone === '' ? null : $guestPhone,
         $guestAddress === '' ? null : $guestAddress,
+        $guestAddressDetail === '' ? null : $guestAddressDetail,
         $serviceType,
         $serviceDate,
         $startTime,

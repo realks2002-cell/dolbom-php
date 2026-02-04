@@ -10,11 +10,22 @@
 // 로컬에서는 hosting.php가 있으면 DB 정보가 호스팅용일 수 있으므로 확인 필요
 $hostingConfig = __DIR__ . '/hosting.php';
 $httpHost = $_SERVER['HTTP_HOST'] ?? '';
-$isLocal = in_array($httpHost, ['localhost', '127.0.0.1', 'localhost:8000', 'localhost:3000']) 
+$serverName = $_SERVER['SERVER_NAME'] ?? '';
+
+// 로컬 환경 감지 강화
+// CLI 환경도 로컬로 간주
+$isCli = php_sapi_name() === 'cli';
+$isLocal = $isCli  // CLI 환경은 항상 로컬
+    || in_array($httpHost, ['localhost', '127.0.0.1', 'localhost:8000', 'localhost:3000']) 
     || strpos($httpHost, 'localhost') === 0 
-    || strpos($httpHost, '127.0.0.1') === 0;
+    || strpos($httpHost, '127.0.0.1') === 0
+    || in_array($serverName, ['localhost', '127.0.0.1'])
+    || strpos($serverName, 'localhost') === 0
+    || strpos($serverName, '127.0.0.1') === 0
+    || (isset($_SERVER['SERVER_ADDR']) && $_SERVER['SERVER_ADDR'] === '127.0.0.1');
 
 // 로컬이 아니고 hosting.php가 있으면 로드
+// 로컬에서는 절대 hosting.php를 로드하지 않음
 if (!$isLocal && file_exists($hostingConfig)) {
     require_once $hostingConfig;
 } elseif (!$isLocal && !file_exists($hostingConfig)) {

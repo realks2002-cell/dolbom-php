@@ -20,9 +20,9 @@ $managerId = $_SESSION['manager_id'];
 
 // 진행중인 서비스 요청 조회 (PENDING, MATCHING 상태)
 $stmt = $pdo->prepare("
-    SELECT sr.*, u.name as customer_name, u.phone as customer_phone
+    SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name, COALESCE(u.phone, sr.guest_phone, '') as customer_phone
     FROM service_requests sr
-    JOIN users u ON u.id = sr.customer_id
+    LEFT JOIN users u ON u.id = sr.customer_id
     WHERE sr.status IN ('PENDING', 'MATCHING')
     ORDER BY sr.service_date ASC, sr.start_time ASC
     LIMIT 50

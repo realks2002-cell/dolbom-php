@@ -46,9 +46,9 @@ if ($tab === 'matching') {
         SELECT sr.id, sr.customer_id, sr.service_type, sr.service_date, sr.start_time, 
                sr.duration_minutes, sr.address, sr.address_detail, sr.lat, sr.lng,
                sr.details, sr.status, sr.estimated_price, sr.created_at, sr.updated_at,
-               u.name as customer_name, u.phone as customer_phone
+               COALESCE(u.name, sr.guest_name, '비회원') as customer_name, COALESCE(u.phone, sr.guest_phone, '') as customer_phone
         FROM service_requests sr
-        JOIN users u ON u.id = sr.customer_id
+        LEFT JOIN users u ON u.id = sr.customer_id
         WHERE sr.status IN ('CONFIRMED', 'MATCHING')
         ORDER BY sr.service_date ASC, sr.start_time ASC
         LIMIT :limit OFFSET :offset
@@ -148,10 +148,10 @@ function formatDuration($minutes) {
                 sr.address,
                 sr.status,
                 sr.estimated_price,
-                u.name as customer_name
+                COALESCE(u.name, sr.guest_name, '비회원') as customer_name
             FROM applications a
             JOIN service_requests sr ON sr.id = a.request_id
-            JOIN users u ON u.id = sr.customer_id
+            LEFT JOIN users u ON u.id = sr.customer_id
             WHERE a.manager_id = ?
             ORDER BY a.created_at DESC
         ");
