@@ -39,6 +39,7 @@ $map = [
     'requests/new' => 'pages/requests/new.php',
     'requests/detail' => 'pages/requests/detail.php',
     'bookings' => 'pages/bookings/index.php',
+    'bookings/guest-check' => 'pages/bookings/guest-check.php',
     'bookings/review' => 'pages/bookings/review.php',
     'payment/success' => 'pages/payment/success.php',
     'payment/fail' => 'pages/payment/fail.php',

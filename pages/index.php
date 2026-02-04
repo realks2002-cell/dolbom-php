@@ -39,9 +39,9 @@ ob_start();
                     <a href="<?= $ctaHref ?>" class="text-lg px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 rounded-full font-semibold transition-all duration-300 min-h-[44px] flex items-center justify-center">
                         서비스 신청하기
                     </a>
-                    <a href="<?= KAKAO_CHAT_URL ?>" target="_blank" rel="noopener noreferrer" class="text-lg px-8 py-4 bg-[#ffc000] hover:bg-[#e6ad00] text-gray-900 rounded-full font-semibold transition-all duration-300 flex items-center justify-center gap-2 min-h-[44px] shadow-lg shadow-[#ffc000]/30" aria-label="카카오톡 상담">
-                        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.727-.11l-4.408 2.883c-.501.265-.678.236-.472-.413l.892-3.678c-2.88-1.46-4.785-3.99-4.785-6.866C1.5 6.665 6.201 3 12 3z"/></svg>
-                        카톡 상담하기
+                    <a href="<?= $base ?>/bookings/guest-check" class="text-lg px-8 py-4 bg-[#ffc000] hover:bg-[#e6ad00] text-gray-900 rounded-full font-semibold transition-all duration-300 flex items-center justify-center gap-2 min-h-[44px] shadow-lg shadow-[#ffc000]/30" aria-label="내 서비스 확인하기">
+                        <i data-lucide="clipboard-check" class="w-5 h-5 flex-shrink-0"></i>
+                        내 서비스 확인하기
                     </a>
                 </div>
                 
