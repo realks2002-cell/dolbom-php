@@ -12,12 +12,43 @@ if (!defined('ROOT_PATH')) {
  */
 function init_session(): void {
     $dir = ROOT_PATH . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'sessions';
+    
+    // 디렉토리 생성 시도
     if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
+        if (!@mkdir($dir, 0755, true)) {
+            // 디렉토리 생성 실패 시 에러 로깅
+            error_log('[init_session] 세션 디렉토리 생성 실패: ' . $dir);
+            
+            // 폴백: 기본 세션 경로 사용
+            if (session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
+            return;
+        }
     }
+    
+    // 디렉토리 쓰기 권한 확인
+    if (!is_writable($dir)) {
+        error_log('[init_session] 세션 디렉토리 쓰기 권한 없음: ' . $dir . ' (권한: ' . substr(sprintf('%o', fileperms($dir)), -4) . ')');
+        
+        // 폴백: 기본 세션 경로 사용
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        return;
+    }
+    
+    // 세션 시작
     if (session_status() === PHP_SESSION_NONE) {
         session_save_path($dir);
-        session_start();
+        
+        // session_start() 실패 시 에러 처리
+        if (!@session_start()) {
+            error_log('[init_session] 세션 시작 실패 (경로: ' . $dir . ')');
+            
+            // 폴백: 기본 경로로 재시도
+            @session_start();
+        }
     }
 }
 

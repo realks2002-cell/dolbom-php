@@ -84,13 +84,13 @@ $minDate = date('Y-m-d');
     <h1 class="text-2xl font-bold">서비스 요청</h1>
     <p class="mt-1 text-gray-600">원하는 서비스와 일시를 선택해주세요.</p>
 
-    <!-- 진행 바 -->
-    <div class="mt-6 flex gap-1" role="progressbar" aria-valuenow="<?= $initialStep ?>" aria-valuemin="1" aria-valuemax="6" aria-label="진행 단계">
-        <?php for ($i = 1; $i <= 6; $i++): ?>
+    <!-- 진행 바 (5단계) -->
+    <div class="mt-6 flex gap-1" role="progressbar" aria-valuenow="<?= $initialStep ?>" aria-valuemin="1" aria-valuemax="5" aria-label="진행 단계">
+        <?php for ($i = 1; $i <= 5; $i++): ?>
         <div class="h-1.5 flex-1 rounded-full bg-gray-200 step-dot" data-step="<?= $i ?>"></div>
         <?php endfor; ?>
     </div>
-    <p class="mt-2 text-sm font-medium text-gray-500"><span id="step-label"><?= $initialStep ?></span> / 6</p>
+    <p class="mt-2 text-sm font-medium text-gray-500"><span id="step-label"><?= $initialStep ?></span> / 5</p>
 
     <?php if ($error): ?>
     <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"><?= htmlspecialchars($error) ?></div>
@@ -145,11 +145,10 @@ $minDate = date('Y-m-d');
         <label for="guest_address_detail" class="block text-sm font-medium text-gray-700">상세 주소 <span class="text-gray-400">(선택)</span></label>
         <input type="text" id="guest_address_detail" name="guest_address_detail" class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3" placeholder="동/호수 등" value="<?= $currentUser && isset($currentUser['address_detail']) ? htmlspecialchars($currentUser['address_detail']) : '' ?>">
     </div>
+    <!-- 비회원 주소 좌표 (hidden) -->
+    <input type="hidden" id="guest_lat" name="guest_lat" value="">
+    <input type="hidden" id="guest_lng" name="guest_lng" value="">
 </div>
-
-
-
-
 
             </div>
         </div>
@@ -355,6 +354,8 @@ $minDate = date('Y-m-d');
         if (s === 3) {
             var date = form.querySelector('#service_date');
             var time = form.querySelector('#start_time');
+            var duration = form.querySelector('input[name="duration_hours"]:checked');
+            
             if (!date || !date.value) {
                 alert('서비스 날짜를 선택해주세요.');
                 if (date) date.focus();
@@ -363,6 +364,12 @@ $minDate = date('Y-m-d');
             if (!time || !time.value) {
                 alert('서비스 시간을 선택해주세요.');
                 if (time) time.focus();
+                return false;
+            }
+            if (!duration) {
+                alert('예상 소요 시간을 선택해주세요.');
+                var firstDuration = form.querySelector('input[name="duration_hours"]');
+                if (firstDuration) firstDuration.focus();
                 return false;
             }
             return true;
@@ -834,6 +841,10 @@ $minDate = date('Y-m-d');
                     phone = guestPhone; // 비회원 전화번호 사용
                 }
                 
+                // 좌표: 회원 > 비회원 순으로 우선순위
+                var lat = formData.get('lat') || formData.get('guest_lat') || '';
+                var lng = formData.get('lng') || formData.get('guest_lng') || '';
+                
                 var serviceData = {
                     service_type: formData.get('service_type'),
                     service_date: formData.get('service_date'),
@@ -842,8 +853,8 @@ $minDate = date('Y-m-d');
                     address: address,
                     address_detail: addressDetail,
                     phone: phone,
-                    lat: formData.get('lat') || '',
-                    lng: formData.get('lng') || '',
+                    lat: lat,
+                    lng: lng,
                     details: formData.get('details') || '',
                     // 비회원 정보
                     guest_name: guestName,
@@ -1050,6 +1061,13 @@ $minDate = date('Y-m-d');
             guestAddrInput.value = item.address;
             console.log('주소 선택됨:', item.address);
         }
+        // 좌표 저장 (비회원용 hidden 필드)
+        var guestLatEl = document.getElementById('guest_lat');
+        var guestLngEl = document.getElementById('guest_lng');
+        if (guestLatEl) guestLatEl.value = String(item.y || '');
+        if (guestLngEl) guestLngEl.value = String(item.x || '');
+        console.log('좌표 저장됨:', { lat: item.y, lng: item.x });
+        
         guestMsgEl.textContent = '주소가 선택되었습니다.';
         guestMsgEl.classList.remove('text-red-600', 'text-gray-600');
         guestMsgEl.classList.add('text-green-600');
