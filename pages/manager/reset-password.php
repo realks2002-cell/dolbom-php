@@ -57,33 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $phoneParam = $_GET['phone'] ?? '';
 $pageTitle = '매니저 비밀번호 재설정 - ' . APP_NAME;
+$mainClass = 'min-h-screen bg-gray-50 px-4 py-12';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle) ?></title>
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: { DEFAULT: '#2563eb' },
-                    },
-                },
-            },
-        };
-    </script>
-</head>
-<body class="font-sans antialiased bg-gray-50">
-    <div class="min-h-screen flex flex-col items-center justify-center px-4">
-        <div class="w-full max-w-md">
+<div class="max-w-2xl mx-auto mt-48 text-base">
+    <div class="w-full max-w-md mx-auto">
             <div class="text-center mb-8">
                 <h1 class="text-3xl font-bold text-primary"><?= APP_NAME ?></h1>
                 <p class="mt-2 text-gray-600">매니저 비밀번호 재설정</p>
@@ -157,10 +135,10 @@ $pageTitle = '매니저 비밀번호 재설정 - ' . APP_NAME;
                 <?php endif; ?>
             </div>
 
-            <div class="mt-6 text-center space-y-2">
-                <a href="<?= $base ?>/manager/login" class="text-sm text-gray-600 hover:text-gray-900">로그인 페이지로 돌아가기</a>
-            </div>
-        </div>
+    <div class="mt-6 text-center space-y-2">
+        <a href="<?= $base ?>/manager/login" class="text-sm text-gray-600 hover:text-gray-900">로그인 페이지로 돌아가기</a>
     </div>
-</body>
-</html>
+</div>
+<?php
+$layoutContent = ob_get_clean();
+require dirname(__DIR__, 2) . '/components/layout.php';

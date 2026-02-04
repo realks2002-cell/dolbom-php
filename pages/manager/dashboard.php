@@ -78,30 +78,13 @@ function formatDuration($minutes) {
         return $mins . '분';
     }
 }
+
+$pageTitle = '매니저 대시보드 - ' . APP_NAME;
+$mainClass = 'min-h-screen bg-gray-50';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="행복안심동행 매니저 대시보드">
-    <meta name="theme-color" content="#2563eb">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="매니저">
-    <title><?= $pageTitle ?></title>
-    <link rel="manifest" href="<?= $base ?>/assets/manifest.json">
-    <link rel="icon" type="image/png" sizes="192x192" href="<?= $base ?>/assets/icons/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="<?= $base ?>/assets/icons/icon-512x512.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="<?= $base ?>/assets/icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="<?= $base ?>/assets/icons/icon-512x512.png">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-</head>
-<body class="bg-gray-50">
-    <!-- 헤더 -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <!-- 매니저 내부 헤더 -->
+    <header class="bg-white border-b border-gray-200 sticky top-24 z-40">
         <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <h1 class="text-xl font-bold text-blue-600"><?= APP_NAME ?> 매니저</h1>
             <div class="flex items-center gap-4">
@@ -723,5 +706,6 @@ function formatDuration($minutes) {
         }
     })();
     </script>
-</body>
-</html>
+<?php
+$layoutContent = ob_get_clean();
+require dirname(__DIR__, 2) . '/components/layout.php';

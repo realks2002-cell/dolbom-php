@@ -33,19 +33,11 @@ $stmt->execute([$managerId]);
 $bookings = $stmt->fetchAll();
 
 $pageTitle = '내 근무기록 - ' . APP_NAME;
+$mainClass = 'min-h-screen bg-gray-50';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?></title>
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-</head>
-<body class="bg-gray-50">
-    <!-- 헤더 -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <!-- 매니저 내부 헤더 -->
+    <header class="bg-white border-b border-gray-200 sticky top-24 z-40">
         <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <h1 class="text-xl font-bold text-blue-600"><?= APP_NAME ?> 매니저</h1>
             <div class="flex items-center gap-4">
@@ -127,5 +119,6 @@ $pageTitle = '내 근무기록 - ' . APP_NAME;
         </div>
         <?php endif; ?>
     </main>
-</body>
-</html>
+<?php
+$layoutContent = ob_get_clean();
+require dirname(__DIR__, 2) . '/components/layout.php';

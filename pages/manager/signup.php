@@ -70,8 +70,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
                 $filename = 'mgr_' . time() . '_' . bin2hex(random_bytes(6)) . '.' . ($ext ?: 'jpg');
                 $dest = $uploadDir . '/' . $filename;
-                if (@move_uploaded_file($tmp, $dest)) {
-                    // 웹에서 접근 가능한 상대 경로로 저장
+                
+                // 이미지 리사이즈 및 압축 (1MB 이하로) 시도
+                $resizeSuccess = false;
+                if (function_exists('resize_and_compress_image')) {
+                    $resizeSuccess = resize_and_compress_image($tmp, $dest, 1920, 1920, 1048576);
+                }
+                
+                // 리사이즈 실패 시 원본 파일 그대로 저장
+                if (!$resizeSuccess) {
+                    error_log('[manager/signup] 이미지 리사이즈 실패, 원본 파일 저장');
+                    if (@move_uploaded_file($tmp, $dest)) {
+                        $photoPath = '/storage/managers/' . $filename;
+                    }
+                } else {
+                    // 리사이즈 성공
                     $photoPath = '/storage/managers/' . $filename;
                 }
             }
@@ -122,39 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = '매니저 회원가입 - ' . APP_NAME;
+$mainClass = 'min-h-screen bg-gray-50 px-4 py-12';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="매니저 회원가입 - 행복안심동행">
-    <title><?= htmlspecialchars($pageTitle) ?></title>
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: { DEFAULT: '#2563eb' },
-                    },
-                },
-            },
-        };
-    </script>
-</head>
-<body class="font-sans antialiased bg-gray-50">
-    <div class="min-h-screen py-8 px-4 text-base">
-        <div class="max-w-2xl mx-auto mt-48">
-            <!-- 헤더 -->
-            <div class="text-center mb-8">
-                <h1 class="text-4xl font-bold text-primary"><?= APP_NAME ?></h1>
-                <p class="mt-2 text-lg text-gray-600">매니저 회원가입</p>
-            </div>
+<div class="mx-auto max-w-2xl mt-48 text-base">
+    <!-- 헤더 -->
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-primary"><?= APP_NAME ?></h1>
+        <p class="mt-2 text-lg text-gray-600">매니저 회원가입</p>
+    </div>
 
             <!-- 회원가입 폼 -->
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
@@ -364,14 +353,14 @@ $pageTitle = '매니저 회원가입 - ' . APP_NAME;
                 </form>
             </div>
 
-            <!-- 하단 링크 -->
-            <div class="mt-6 text-center">
-                <p class="text-base text-gray-600">
-                    이미 계정이 있으신가요? 
-                    <a href="<?= $base ?>/manager/login" class="text-primary hover:underline font-medium">로그인</a>
-                </p>
-            </div>
-        </div>
+    <!-- 하단 링크 -->
+    <div class="mt-6 text-center">
+        <p class="text-base text-gray-600">
+            이미 계정이 있으신가요? 
+            <a href="<?= $base ?>/manager/login" class="text-primary hover:underline font-medium">로그인</a>
+        </p>
     </div>
-</body>
-</html>
+</div>
+<?php
+$layoutContent = ob_get_clean();
+require dirname(__DIR__, 2) . '/components/layout.php';

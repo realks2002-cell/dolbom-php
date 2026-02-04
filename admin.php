@@ -48,34 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = '관리자 로그인 - ' . APP_NAME;
+$mainClass = 'min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="관리자 로그인 - 행복안심동행">
-    <title><?= htmlspecialchars($pageTitle) ?></title>
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/tailwind.min.css">
-    <link rel="stylesheet" href="<?= $base ?>/assets/css/custom.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: { DEFAULT: '#2563eb' },
-                    },
-                },
-            },
-        };
-    </script>
-</head>
-<body class="font-sans antialiased bg-gray-50">
-    <div class="min-h-screen flex flex-col items-center justify-center px-4">
-        <div class="w-full max-w-md">
+<div class="w-full max-w-md">
             <!-- 로고 -->
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-bold text-primary"><?= APP_NAME ?></h1>
@@ -143,15 +119,14 @@ $pageTitle = '관리자 로그인 - ' . APP_NAME;
                         </button>
                     </div>
                 </form>
-            </div>
-
-            <!-- 하단 링크 -->
-            <div class="mt-6 text-center">
-                <a href="<?= $base ?>/" class="text-base text-gray-600 hover:text-gray-900">일반 사용자 로그인</a>
-            </div>
-        </div>
     </div>
-    <script>
+
+    <!-- 하단 링크 -->
+    <div class="mt-6 text-center">
+        <a href="<?= $base ?>/" class="text-base text-gray-600 hover:text-gray-900">일반 사용자 로그인</a>
+    </div>
+</div>
+<script>
     // 페이지 로드 시 입력 필드 초기화 (브라우저 자동완성 방지)
     document.addEventListener('DOMContentLoaded', function() {
         const adminIdInput = document.getElementById('admin_id');
@@ -181,5 +156,6 @@ $pageTitle = '관리자 로그인 - ' . APP_NAME;
         }
     }
     </script>
-</body>
-</html>
+<?php
+$layoutContent = ob_get_clean();
+require __DIR__ . '/components/layout.php';
