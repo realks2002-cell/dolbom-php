@@ -3,10 +3,10 @@
  * 매니저 회원가입 페이지
  * URL: /manager/signup
  */
-require_once dirname(__DIR__, 2) . '/config/app.php';
-require_once dirname(__DIR__, 2) . '/config/encryption.php';
-require_once dirname(__DIR__, 2) . '/includes/helpers.php';
-require_once dirname(__DIR__, 2) . '/includes/security.php';
+
+require_once __DIR__ . '/../../config/app.php';
+require_once __DIR__ . '/../../includes/helpers.php';
+require_once __DIR__ . '/../../includes/security.php';
 
 init_session();
 
@@ -21,7 +21,7 @@ if (!empty($_SESSION['manager_id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim((string) ($_POST['name'] ?? ''));
     $gender = trim((string) ($_POST['gender'] ?? ''));
-        $bank = trim((string) ($_POST['bank'] ?? ''));
+    $bank = trim((string) ($_POST['bank'] ?? ''));
     $ssn = trim((string) ($_POST['ssn'] ?? ''));
     $phone = trim((string) ($_POST['phone'] ?? ''));
     $address1 = trim((string) ($_POST['address1'] ?? ''));
@@ -39,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = '개인정보 이용에 동의해주세요.';
     } elseif ($name === '') {
         $error = '이름을 입력해주세요.';
+    } elseif ($gender === '') {
+        $error = '성별을 선택해주세요.';
     } elseif ($ssn === '') {
         $error = '주민번호를 입력해주세요.';
     } elseif ($phone === '') {
@@ -54,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $passwordConfirm) {
         $error = '비밀번호가 일치하지 않습니다.';
     } else {
-        $pdo = require dirname(__DIR__, 2) . '/database/connect.php';
+        $pdo = require __DIR__ . '/../../database/connect.php';
         // 사진 업로드 처리 (선택)
         $photoPath = null;
         if (!empty($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
@@ -63,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($info === false) {
                 // 이미지 아님, 무시
             } else {
-                $uploadDir = dirname(__DIR__, 2) . '/storage/managers';
+                $uploadDir = __DIR__ . '/../../storage/managers';
                 if (!is_dir($uploadDir)) {
                     @mkdir($uploadDir, 0755, true);
                 }
@@ -96,40 +98,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($st->fetch()) {
             $error = '이미 등록된 전화번호 또는 주민번호입니다.';
         } else {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $encryptedSsn = encrypt_ssn($ssn); // 주민번호 암호화
-            $st = $pdo->prepare('INSERT INTO managers (name, ssn, phone, address1, address2, account_number, bank, specialty, photo, gender, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $st->execute([
-                $name,
-                $encryptedSsn, // 암호화된 주민번호
-                $phone,
-                $address1,
-                $address2 === '' ? null : $address2,
-                $accountNumber,
-                $bank === '' ? null : $bank,
-                $specialty === '' ? null : $specialty,
-                $photoPath === null ? null : $photoPath,
-                $gender === '' ? null : $gender,
-                $hash
-            ]);
-            
-            // 자동 로그인
-            init_session();
-            $managerId = $pdo->lastInsertId();
-            $_SESSION['manager_id'] = $managerId;
-            $_SESSION['manager_name'] = $name;
-            $_SESSION['manager_phone'] = $phone;
-            if ($photoPath !== null) {
-                $_SESSION['manager_photo'] = $photoPath;
+            try {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $managerId = uuid4(); // UUID 생성
+                
+                $st = $pdo->prepare('INSERT INTO managers (id, name, ssn, phone, address1, address2, account_number, bank, specialty, photo, gender, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $st->execute([
+                    $managerId, // UUID
+                    $name,
+                    $ssn, // 주민번호 (평문)
+                    $phone,
+                    $address1,
+                    $address2 === '' ? null : $address2,
+                    $accountNumber,
+                    $bank === '' ? null : $bank,
+                    $specialty === '' ? null : $specialty,
+                    $photoPath === null ? null : $photoPath,
+                    $gender === '' ? null : $gender,
+                    $hash
+                ]);
+                
+                // 자동 로그인
+                init_session();
+                $_SESSION['manager_id'] = $managerId;
+                $_SESSION['manager_name'] = $name;
+                $_SESSION['manager_phone'] = $phone;
+                if ($photoPath !== null) {
+                    $_SESSION['manager_photo'] = $photoPath;
+                }
+                if (!empty($gender)) {
+                    $_SESSION['manager_gender'] = $gender;
+                }
+                if (!empty($bank)) {
+                    $_SESSION['manager_bank'] = $bank;
+                }
+                
+                redirect('/manager/dashboard');
+            } catch (Exception $e) {
+                $error = '회원가입 중 오류가 발생했습니다: ' . $e->getMessage();
+                error_log('[manager/signup] 에러: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
             }
-            if (!empty($gender)) {
-                $_SESSION['manager_gender'] = $gender;
-            }
-            if (!empty($bank)) {
-                $_SESSION['manager_bank'] = $bank;
-            }
-            
-            redirect('/manager/dashboard');
         }
     }
 }
@@ -155,35 +163,34 @@ ob_start();
 
                 <form method="post" action="<?= $base ?>/manager/signup" enctype="multipart/form-data" class="space-y-4">
                     <!-- 이름 -->
-                    <div class="flex items-start gap-4">
-                        <div class="flex-1">
-                            <label for="name" class="block text-base font-medium text-gray-700 mb-1">이름 <span class="text-red-500">*</span></label>
-                            <input 
-                                type="text" 
-                                id="name" 
-                                name="name" 
-                                value="<?= htmlspecialchars($_POST['name'] ?? '') ?>"
-                                class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                                placeholder="홍길동"
-                                required>
-                        </div>
+                    <div>
+                        <label for="name" class="block text-base font-medium text-gray-700 mb-1">이름 <span class="text-red-500">*</span></label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            name="name" 
+                            value="<?= htmlspecialchars($_POST['name'] ?? '') ?>"
+                            class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
+                            placeholder="홍길동"
+                            required>
+                    </div>
 
-                        <div class="w-40">
-                            <label class="block text-base font-medium text-gray-700 mb-1">성별</label>
-                            <div class="flex items-center gap-3">
-                                <label class="inline-flex items-center text-base">
-                                    <input type="radio" name="gender" value="M" <?= (isset($_POST['gender']) && $_POST['gender'] === 'M') ? 'checked' : '' ?> class="h-4 w-4 text-primary border-gray-300">
-                                    <span class="ml-2">남</span>
-                                </label>
-                                <label class="inline-flex items-center text-base">
-                                    <input type="radio" name="gender" value="F" <?= (isset($_POST['gender']) && $_POST['gender'] === 'F') ? 'checked' : '' ?> class="h-4 w-4 text-primary border-gray-300">
-                                    <span class="ml-2">여</span>
-                                </label>
-                            </div>
+                    <!-- 성별 (필수) -->
+                    <div>
+                        <label class="block text-base font-medium text-gray-700 mb-1">성별 <span class="text-red-500">*</span></label>
+                        <div class="flex items-center gap-4">
+                            <label class="inline-flex items-center text-base cursor-pointer">
+                                <input type="radio" name="gender" value="M" <?= (isset($_POST['gender']) && $_POST['gender'] === 'M') ? 'checked' : '' ?> class="h-4 w-4 text-primary border-gray-300" required>
+                                <span class="ml-2">남</span>
+                            </label>
+                            <label class="inline-flex items-center text-base cursor-pointer">
+                                <input type="radio" name="gender" value="F" <?= (isset($_POST['gender']) && $_POST['gender'] === 'F') ? 'checked' : '' ?> class="h-4 w-4 text-primary border-gray-300" required>
+                                <span class="ml-2">여</span>
+                            </label>
                         </div>
                     </div>
 
-                    <!-- 사진 업로드 (이름 아래) -->
+                    <!-- 사진 업로드 -->
                     <div>
                         <label for="photo" class="block text-base font-medium text-gray-700 mb-1">사진 업로드</label>
                         <input type="file" id="photo" name="photo" accept="image/*" class="block w-full text-base text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-primary file:text-white" />
@@ -295,27 +302,43 @@ ob_start();
                     <!-- 비밀번호 -->
                     <div>
                         <label for="password" class="block text-base font-medium text-gray-700 mb-1">비밀번호 <span class="text-red-500">*</span></label>
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password" 
-                            class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                            placeholder="6자 이상"
-                            required
-                            autocomplete="new-password">
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                placeholder="6자 이상"
+                                required
+                                autocomplete="new-password">
+                            <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                                <svg id="eye-password" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- 비밀번호 확인 -->
                     <div>
                         <label for="password_confirm" class="block text-base font-medium text-gray-700 mb-1">비밀번호 확인 <span class="text-red-500">*</span></label>
-                        <input 
-                            type="password" 
-                            id="password_confirm" 
-                            name="password_confirm" 
-                            class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                            placeholder="6자리"
-                            required
-                            autocomplete="new-password">
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="password_confirm" 
+                                name="password_confirm" 
+                                class="min-h-[44px] block w-full rounded-lg border border-gray-300 px-4 py-2 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                placeholder="6자 이상"
+                                required
+                                autocomplete="new-password">
+                            <button type="button" onclick="togglePassword('password_confirm')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                                <svg id="eye-password_confirm" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- 약관 동의 -->
@@ -361,6 +384,23 @@ ob_start();
         </p>
     </div>
 </div>
+
+<script>
+// 비밀번호 표시/숨김 토글
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const eye = document.getElementById('eye-' + inputId);
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>';
+    } else {
+        input.type = 'password';
+        eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+    }
+}
+</script>
+
 <?php
 $layoutContent = ob_get_clean();
-require dirname(__DIR__, 2) . '/components/layout.php';
+require __DIR__ . '/../../components/layout.php';

@@ -84,7 +84,7 @@ $mainClass = 'min-h-screen bg-gray-50';
 ob_start();
 ?>
     <!-- 매니저 내부 헤더 -->
-    <header class="bg-white border-b border-gray-200 sticky top-24 z-40">
+    <header class="bg-white border-b border-gray-200 mt-[70px]">
         <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <h1 class="text-xl font-bold text-blue-600"><?= APP_NAME ?> 매니저</h1>
             <div class="flex items-center gap-4">

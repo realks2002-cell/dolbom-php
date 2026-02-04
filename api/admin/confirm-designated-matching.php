@@ -96,6 +96,16 @@ try {
         ");
         $updateStmt->execute([$requestId]);
         
+        // 다른 매니저의 대기중인 지원을 모두 거절 처리
+        $rejectOthersStmt = $pdo->prepare("
+            UPDATE applications 
+            SET status = 'REJECTED', updated_at = NOW() 
+            WHERE request_id = ? 
+            AND manager_id != ? 
+            AND status = 'PENDING'
+        ");
+        $rejectOthersStmt->execute([$requestId, $request['designated_manager_id']]);
+        
         // 트랜잭션 커밋
         $pdo->commit();
         

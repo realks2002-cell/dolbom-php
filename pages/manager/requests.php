@@ -20,20 +20,23 @@ $managerId = $_SESSION['manager_id'];
 
 // 진행중인 서비스 요청 조회 (PENDING, MATCHING 상태)
 // 지정 도우미가 있는 요청은 제외 (designated_manager_id IS NULL)
+// 이미 매칭 완료된 요청도 제외 (bookings 없는 것만)
 $stmt = $pdo->prepare("
     SELECT sr.*, COALESCE(u.name, sr.guest_name, '비회원') as customer_name, COALESCE(u.phone, sr.guest_phone, '') as customer_phone
     FROM service_requests sr
     LEFT JOIN users u ON u.id = sr.customer_id
+    LEFT JOIN bookings b ON b.request_id = sr.id
     WHERE sr.status IN ('PENDING', 'MATCHING')
     AND sr.designated_manager_id IS NULL
+    AND b.id IS NULL
     ORDER BY sr.service_date ASC, sr.start_time ASC
     LIMIT 50
 ");
 $stmt->execute();
 $requests = $stmt->fetchAll();
 
-// 이미 지원한 요청 ID 목록
-$appliedStmt = $pdo->prepare("SELECT request_id FROM applications WHERE manager_id = ?");
+// 이미 지원한 요청 ID 목록 (거절된 것은 제외)
+$appliedStmt = $pdo->prepare("SELECT request_id FROM applications WHERE manager_id = ? AND status IN ('PENDING', 'ACCEPTED')");
 $appliedStmt->execute([$managerId]);
 $appliedIds = $appliedStmt->fetchAll(PDO::FETCH_COLUMN);
 
