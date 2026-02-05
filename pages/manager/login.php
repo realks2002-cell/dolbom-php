@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // 전화번호로 매니저 조회 (하이픈 포함/미포함 모두 검색)
         // DB의 전화번호도 정규화하여 비교
-        $st = $pdo->prepare('SELECT id, name, phone, password_hash FROM managers');
+        $st = $pdo->prepare('SELECT id, name, phone, password_hash, approval_status FROM managers');
         $st->execute();
         $managers = $st->fetchAll();
         
@@ -54,12 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = '비밀번호가 설정되지 않은 계정입니다. 관리자에게 문의하세요.';
         } elseif (!password_verify($password, $manager['password_hash'])) {
             $error = '전화번호 또는 비밀번호가 올바르지 않습니다.';
+        } elseif (($manager['approval_status'] ?? 'pending') === 'pending') {
+            $error = '승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.';
+        } elseif (($manager['approval_status'] ?? 'pending') === 'rejected') {
+            $error = '가입이 거절되었습니다. 관리자에게 문의하세요.';
         } else {
+            // 승인된 매니저만 로그인 가능
             init_session();
             $_SESSION['manager_id'] = $manager['id'];
             $_SESSION['manager_name'] = $manager['name'];
             $_SESSION['manager_phone'] = $manager['phone'];
-            
+
             // PHP 대시보드로 리다이렉트
             redirect('/manager/dashboard');
         }

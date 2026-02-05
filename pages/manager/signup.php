@@ -101,8 +101,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $managerId = uuid4(); // UUID 생성
-                
-                $st = $pdo->prepare('INSERT INTO managers (id, name, ssn, phone, address1, address2, account_number, bank, specialty, photo, gender, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+
+                // approval_status = 'pending'으로 등록 (관리자 승인 필요)
+                $st = $pdo->prepare('INSERT INTO managers (id, name, ssn, phone, address1, address2, account_number, bank, specialty, photo, gender, password_hash, approval_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 $st->execute([
                     $managerId, // UUID
                     $name,
@@ -115,25 +116,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $specialty === '' ? null : $specialty,
                     $photoPath === null ? null : $photoPath,
                     $gender === '' ? null : $gender,
-                    $hash
+                    $hash,
+                    'pending' // 승인 대기 상태
                 ]);
-                
-                // 자동 로그인
+
+                // 자동 로그인 제거 - 승인 대기 안내 페이지로 이동
                 init_session();
-                $_SESSION['manager_id'] = $managerId;
-                $_SESSION['manager_name'] = $name;
-                $_SESSION['manager_phone'] = $phone;
-                if ($photoPath !== null) {
-                    $_SESSION['manager_photo'] = $photoPath;
-                }
-                if (!empty($gender)) {
-                    $_SESSION['manager_gender'] = $gender;
-                }
-                if (!empty($bank)) {
-                    $_SESSION['manager_bank'] = $bank;
-                }
-                
-                redirect('/manager/dashboard');
+                $_SESSION['signup_completed'] = true;
+                $_SESSION['signup_manager_name'] = $name;
+                $_SESSION['signup_manager_phone'] = $phone;
+
+                redirect('/manager/signup-complete');
             } catch (Exception $e) {
                 $error = '회원가입 중 오류가 발생했습니다: ' . $e->getMessage();
                 error_log('[manager/signup] 에러: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
