@@ -6,8 +6,19 @@
 require_once dirname(__DIR__, 2) . '/config/app.php';
 require_once dirname(__DIR__, 2) . '/includes/helpers.php';
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
+require_once dirname(__DIR__, 2) . '/includes/service_prices.php';
 
 $base = rtrim(BASE_URL, '/');
+
+// 서비스별 가격 조회
+$pdo = require dirname(__DIR__, 2) . '/database/connect.php';
+$servicePrices = get_all_service_prices($pdo);
+if ($servicePrices === false) {
+    // 가격 정보를 불러올 수 없으면 오류 페이지로 리다이렉트
+    init_session();
+    $_SESSION['error_message'] = '서비스 가격 정보를 불러올 수 없습니다. 관리자에게 문의해주세요.';
+    redirect('/');
+}
 
 // 회원/비회원 구분은 1단계에서 처리
 // 비회원도 서비스 신청을 진행할 수 있도록 허용
@@ -24,7 +35,6 @@ if ($userType === 'member' && !$currentUser) {
 $initialStep = ($currentUser && $currentUser['role'] === ROLE_CUSTOMER) ? 1.5 : 1;
 
 $error = '';
-$RATE_PER_HOUR = 20000;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $serviceType = trim((string) ($_POST['service_type'] ?? ''));
@@ -57,9 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         $durationMin = $duration * 60;
-        $estimatedPrice = $duration * $RATE_PER_HOUR;
+        // 서비스 유형에 따른 가격 계산
+        $pricePerHour = $servicePrices[$serviceType] ?? false;
+        if ($pricePerHour === false) {
+            $error = '서비스 가격 정보를 불러올 수 없습니다. 페이지를 새로고침해주세요.';
+        }
+        $estimatedPrice = $duration * $pricePerHour;
         $id = uuid4();
-        $pdo = require dirname(__DIR__, 2) . '/database/connect.php';
         // guest 컬럼 포함하여 INSERT (save-temp.php와 일관성 유지)
         $st = $pdo->prepare('INSERT INTO service_requests (id, customer_id, designated_manager_id, guest_name, guest_phone, guest_address, guest_address_detail, service_type, service_date, start_time, duration_minutes, address, address_detail, phone, lat, lng, details, status, estimated_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $st->execute([$id, $currentUser['id'], $designatedManagerId === '' ? null : $designatedManagerId, null, null, null, null, $serviceType, $serviceDate, $startTime, $durationMin, $address, $addressDetail === '' ? null : $addressDetail, $phone === '' ? null : $phone, $lat, $lng, $details === '' ? null : $details, 'PENDING', $estimatedPrice]);
@@ -217,7 +231,7 @@ $minDate = date('Y-m-d');
                 <div class="rounded-lg bg-gray-50 p-4">
                     <p class="text-sm font-medium text-gray-700">예상 금액</p>
                     <p class="mt-1 text-xl font-bold text-primary"><span id="estimated-price">0</span>원</p>
-                    <p class="mt-1 text-xs text-gray-500">기본 요금 <?= number_format($RATE_PER_HOUR) ?>원/시간 × <span id="duration-display">0</span>시간 · 최종 금액은 실제 소요 시간에 따라 달라질 수 있습니다.</p>
+                    <p class="mt-1 text-xs text-gray-500">선택한 서비스 요금 <span id="rate-display">0</span>원/시간 × <span id="duration-display">0</span>시간 · 최종 금액은 실제 소요 시간에 따라 달라질 수 있습니다.</p>
                 </div>
             </div>
         </div>
@@ -348,8 +362,17 @@ $minDate = date('Y-m-d');
     var btnPrev = document.getElementById('btn-prev');
     var btnNext = document.getElementById('btn-next');
     var btnPayment = document.getElementById('btn-payment');
-    var ratePerHour = <?= (int) $RATE_PER_HOUR ?>;
+    var servicePrices = <?= json_encode($servicePrices) ?>;
     var apiBase = <?= json_encode($base) ?>;
+
+    // 현재 선택된 서비스의 시간당 가격을 반환
+    function getCurrentRatePerHour() {
+        var svc = form.querySelector('input[name="service_type"]:checked');
+        if (svc && servicePrices[svc.value]) {
+            return servicePrices[svc.value];
+        }
+        return 0;
+    }
 
     function step() { return parseFloat(form.dataset.step || '1'); }
     function setStep(n) {
@@ -527,11 +550,14 @@ $minDate = date('Y-m-d');
     function updateEstimated() {
         var d = form.querySelector('input[name="duration_hours"]:checked');
         var h = d ? parseInt(d.value, 10) : 0;
+        var ratePerHour = getCurrentRatePerHour();
         var price = h * ratePerHour;
         var durEl = document.getElementById('duration-display');
         var priceEl = document.getElementById('estimated-price');
+        var rateEl = document.getElementById('rate-display');
         if (durEl) durEl.textContent = h;
         if (priceEl) priceEl.textContent = price.toLocaleString();
+        if (rateEl) rateEl.textContent = ratePerHour.toLocaleString();
     }
 
     function updateSummary() {
@@ -559,8 +585,9 @@ $minDate = date('Y-m-d');
         }
         
         var h = dur ? parseInt(dur.value, 10) : 0;
+        var ratePerHour = getCurrentRatePerHour();
         var price = h * ratePerHour;
-        
+
         document.getElementById('summary-service').textContent = svc ? svc.value : '-';
         document.getElementById('summary-datetime').textContent = (dt && tm) ? dt + ' ' + tm : '-';
         document.getElementById('summary-duration').textContent = h ? h + '시간' : '-';
@@ -577,6 +604,10 @@ $minDate = date('Y-m-d');
     }
 
     form.querySelectorAll('input[name="duration_hours"]').forEach(function(r) {
+        r.addEventListener('change', updateEstimated);
+    });
+    // 서비스 선택 시에도 가격 업데이트
+    form.querySelectorAll('input[name="service_type"]').forEach(function(r) {
         r.addEventListener('change', updateEstimated);
     });
     updateEstimated();
@@ -847,7 +878,7 @@ $minDate = date('Y-m-d');
             var duration = 0;
             var radios = form.querySelectorAll('input[name="duration_hours"]:checked');
             if (radios.length) duration = parseInt(radios[0].value, 10) || 0;
-            var amount = Number(duration * ratePerHour);
+            var amount = Number(duration * getCurrentRatePerHour());
             
             console.log('결제 금액:', amount);
             

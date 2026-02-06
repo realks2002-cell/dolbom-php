@@ -73,6 +73,7 @@ $map = [
     'admin/refunds' => 'pages/admin/refunds.php',
     'admin/refund-info' => 'pages/admin/refund-info.php',
     'admin/revenue' => 'pages/admin/revenue.php',
+    'admin/service-prices' => 'pages/admin/service-prices.php',
     'admin/settings' => 'pages/admin/settings.php',
 ];
 

@@ -10,6 +10,7 @@ require_once dirname(__DIR__, 2) . '/config/app.php';
 require_once dirname(__DIR__, 2) . '/api/cors.php';
 require_once dirname(__DIR__, 2) . '/includes/helpers.php';
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
+require_once dirname(__DIR__, 2) . '/includes/service_prices.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -109,11 +110,18 @@ if (!preg_match('/^[0-9-]+$/', $phone)) {
 }
 
 $durationMin = $duration * 60;
-$RATE_PER_HOUR = 20000;
-$estimatedPrice = $duration * $RATE_PER_HOUR;
 $requestId = uuid4();
 
 $pdo = require dirname(__DIR__, 2) . '/database/connect.php';
+
+// 서비스 유형에 따른 가격 조회
+$pricePerHour = get_service_price($pdo, $serviceType);
+if ($pricePerHour === false) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => '서비스 가격 정보를 불러올 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.']);
+    exit;
+}
+$estimatedPrice = $duration * $pricePerHour;
 
 try {
     // 디버깅: 저장 전 값 확인
